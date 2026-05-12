@@ -1,0 +1,39 @@
+package Model.controller.user;
+
+import Model.controller.user.dto.response.UserProfilePhotoResponseDto;
+import Model.controller.user.service.UserService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+
+@RestController
+@RequestMapping("/user")
+public class UserController {
+
+    private final UserService userService;
+
+    @Autowired
+    public UserController(UserService userService) {
+        this.userService = userService;
+    }
+
+    @GetMapping("/findProfilePhotoKeys")
+    public ResponseEntity<List<UserProfilePhotoResponseDto>> findProfilePhotoKeysByUuids(
+            @RequestParam List<UUID> userIds
+    ){
+        List <UserProfilePhotoResponseDto> userProfilePhotoResponseDtos = new ArrayList<>();
+        if(!userIds.isEmpty()){
+            userProfilePhotoResponseDtos = userService.findUserProfilePhotoKey(userIds);
+        }
+        return ResponseEntity.ok(userProfilePhotoResponseDtos);
+    }
+
+
+}

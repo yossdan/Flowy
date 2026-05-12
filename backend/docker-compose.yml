@@ -1,0 +1,89 @@
+services:
+  db_users:
+    image: postgres:17
+    container_name: db_spotify_users
+    environment:
+      POSTGRES_DB: spotify_users
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: "2003"
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data_users:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d spotify_users"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  db_music:
+    image: postgres:17
+    container_name: db_spotify_music
+    environment:
+      POSTGRES_DB: spotify_music
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: "2003"
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres_data_music:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d spotify_music"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend-cloud:
+    build: ./backend/spotify_cloud
+    container_name: backend_spotify_cloud
+    ports:
+      - "8083:8080"
+    environment:
+      CLOUDFLARE_R2_ACCOUNT_ID: "5ec9f021d8a08e548dd1f57d59de2f0b"
+      CLOUDFLARE_R2_ACCESS_KEY: "cd0ad266a112bbb73c5ec919583320c0"
+      CLOUDFLARE_R2_SECRET_KEY: "7aaedfe83f83dcd4e606d774161902e9142f9f07a242f6450820544924aabdb9"
+      CLOUDFLARE_R2_BUCKET: "music-app-dev"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  backend-users:
+    build: ./backend/spotify_users
+    container_name: backend_users
+    ports:
+      - "8081:8080"
+    depends_on:
+      db_users:
+        condition: service_healthy
+      backend-cloud:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db_users:5432/spotify_users
+      SPRING_DATASOURCE_USERNAME: admin
+      SPRING_DATASOURCE_PASSWORD: "2003"
+      CLOUD_SERVICE_URL: http://backend-cloud:8080
+      MUSIC_SERVICE_URL: http://backend-music:8080
+
+  backend-music:
+    build: ./backend/spotify_music
+    container_name: backend_music
+    ports:
+      - "8082:8080"
+    depends_on:
+      db_music:
+        condition: service_healthy
+      backend-cloud:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db_music:5432/spotify_music
+      SPRING_DATASOURCE_USERNAME: admin
+      SPRING_DATASOURCE_PASSWORD: "2003"
+      CLOUD_SERVICE_URL: http://backend-cloud:8080
+      USER_SERVICE_URL: http://backend-users:8080
+
+volumes:
+  postgres_data_users:
+  postgres_data_music:
