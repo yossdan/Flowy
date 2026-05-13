@@ -1,13 +1,16 @@
 package Model.controller.user;
 
+import Model.controller.user.dto.request.LoginUserRequestDto;
+import Model.controller.user.dto.request.RegisterUserRequestDto;
+import Model.controller.user.dto.response.LoginUserResponseDto;
+import Model.controller.user.dto.response.RegisterUserResponseDto;
 import Model.controller.user.dto.response.UserProfilePhotoResponseDto;
 import Model.controller.user.service.UserService;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
 import java.util.List;
