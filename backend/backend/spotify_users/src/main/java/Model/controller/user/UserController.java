@@ -34,6 +34,23 @@ public class UserController {
         }
         return ResponseEntity.ok(userProfilePhotoResponseDtos);
     }
+    
+    @PostMapping("/register")
+    public ResponseEntity<RegisterUserResponseDto> registerUser(
+            @Valid @RequestBody RegisterUserRequestDto dto
+    ) {
+        RegisterUserResponseDto response = userService.registerUser(dto);
 
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @PostMapping("/login")
+    public ResponseEntity<LoginUserResponseDto> loginUser(
+            @Valid @RequestBody LoginUserRequestDto dto
+    ) {
+        LoginUserResponseDto response = userService.loginUser(dto);
+
+        return ResponseEntity.ok(response);
+    }
 
 }
