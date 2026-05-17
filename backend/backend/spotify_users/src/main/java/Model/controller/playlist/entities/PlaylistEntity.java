@@ -13,7 +13,7 @@ import java.util.UUID;
 uniqueConstraints = {@UniqueConstraint(name = "playlist_title_userId_UK", columnNames = {"title", "user_id"})})
 public class PlaylistEntity {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
     @Column(name = "title", nullable = false)
