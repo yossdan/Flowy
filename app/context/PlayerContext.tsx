@@ -864,6 +864,11 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       removeSongFromLibrary,
       deletePlaylist,
       updatePlaylistInfo,
+      recentlyPlayed,
+      mostPlayedSongs,
+      recommendedSongs,
+      topArtists,
+      topAlbums,
     }),
     [
       songs,
