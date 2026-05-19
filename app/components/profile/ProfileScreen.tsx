@@ -28,6 +28,16 @@ export default function ProfileScreen({
   const displayName = user?.name || data.name;
   const displayInitial = displayName.slice(0, 1).toUpperCase();
 
+  const [profilePhotoBroken, setProfilePhotoBroken] = useState(false);
+
+  const safeProfilePhoto =
+    typeof user?.profilePhoto === "string" &&
+    user.profilePhoto.startsWith("data:image") &&
+    user.profilePhoto.includes("base64,") &&
+    user.profilePhoto.split("base64,")[1]?.trim().length > 20 &&
+    !profilePhotoBroken
+      ? user.profilePhoto
+      : null;
   const [showEditModal, setShowEditModal] = useState(false);
   const [profileName, setProfileName] = useState(displayName);
   const [profileInitial, setProfileInitial] = useState(displayInitial);
@@ -90,15 +100,16 @@ export default function ProfileScreen({
                 </button>
 
                 <button className="grid h-10 w-10 place-items-center overflow-hidden rounded-full bg-white/10 ring-1 ring-white/10 hover:bg-white/15 cursor-pointer">
-                  {profileImage ? (
+                  {profileImage || safeProfilePhoto ? (
                     <img
-                      src={profileImage}
+                      src={profileImage || safeProfilePhoto || ""}
                       alt="Foto de perfil"
+                      onError={() => setProfilePhotoBroken(true)}
                       className="h-full w-full object-cover"
                     />
                   ) : (
                     <span className="text-xs font-extrabold">
-                      {profileInitial}
+                      {displayInitial}
                     </span>
                   )}
                 </button>
@@ -108,15 +119,16 @@ export default function ProfileScreen({
                 <div className="bg-gradient-to-b from-[#3a0d1b] via-[#1b0d14] to-[#0d0d10] px-4 pb-6 pt-6 sm:px-6">
                   <div className="flex flex-col gap-6 md:flex-row md:items-end">
                     <div className="grid h-32 w-32 shrink-0 place-items-center overflow-hidden rounded-3xl bg-white/10 ring-1 ring-white/10 shadow-2xl shadow-black/40">
-                      {profileImage ? (
+                      {profileImage || safeProfilePhoto ? (
                         <img
-                          src={profileImage}
+                          src={profileImage || safeProfilePhoto || ""}
                           alt="Foto de perfil"
+                          onError={() => setProfilePhotoBroken(true)}
                           className="h-full w-full object-cover"
                         />
                       ) : (
                         <span className="text-5xl font-extrabold text-white">
-                          {profileInitial}
+                          {displayInitial}
                         </span>
                       )}
                     </div>

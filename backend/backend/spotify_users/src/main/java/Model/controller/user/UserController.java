@@ -16,6 +16,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+@CrossOrigin(origins = "http://localhost:3000")
 @RestController
 @RequestMapping("/user")
 public class UserController {
@@ -29,19 +30,17 @@ public class UserController {
 
     @GetMapping("/findProfilePhotoKeys")
     public ResponseEntity<List<UserProfilePhotoResponseDto>> findProfilePhotoKeysByUuids(
-            @RequestParam List<UUID> userIds
-    ){
-        List <UserProfilePhotoResponseDto> userProfilePhotoResponseDtos = new ArrayList<>();
-        if(!userIds.isEmpty()){
+            @RequestParam List<UUID> userIds) {
+        List<UserProfilePhotoResponseDto> userProfilePhotoResponseDtos = new ArrayList<>();
+        if (!userIds.isEmpty()) {
             userProfilePhotoResponseDtos = userService.findUserProfilePhotoKey(userIds);
         }
         return ResponseEntity.ok(userProfilePhotoResponseDtos);
     }
-    
+
     @PostMapping("/register")
     public ResponseEntity<RegisterUserResponseDto> registerUser(
-            @Valid @RequestBody RegisterUserRequestDto dto
-    ) {
+            @Valid @RequestBody RegisterUserRequestDto dto) {
         RegisterUserResponseDto response = userService.registerUser(dto);
 
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
@@ -49,8 +48,7 @@ public class UserController {
 
     @PostMapping("/login")
     public ResponseEntity<LoginUserResponseDto> loginUser(
-            @Valid @RequestBody LoginUserRequestDto dto
-    ) {
+            @Valid @RequestBody LoginUserRequestDto dto) {
         LoginUserResponseDto response = userService.loginUser(dto);
 
         return ResponseEntity.ok(response);

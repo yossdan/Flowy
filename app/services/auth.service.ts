@@ -1,8 +1,4 @@
-import {
-  apiRequest,
-  removeToken,
-  saveToken,
-} from "@/app/services/http.service";
+import { apiRequest, removeToken } from "@/app/services/http.service";
 
 export type UserRole = "listener" | "artist";
 
@@ -11,6 +7,7 @@ export type AuthUser = {
   name: string;
   email: string;
   role: UserRole;
+  profilePhoto?: string;
 };
 
 export type LoginPayload = {
@@ -27,39 +24,126 @@ export type RegisterPayload = {
   acceptedTerms: boolean;
 };
 
+export type BackendUserResponse = {
+  userId: string;
+  userName: string;
+  roleName: string;
+  profilePhoto?: string | number[] | null;
+};
+
 export type AuthResponse = {
   token: string;
   user: AuthUser;
 };
 
-export async function login(payload: LoginPayload) {
-  const response = await apiRequest<AuthResponse>("/auth/login", {
-    method: "POST",
-    body: payload,
-    auth: false,
-  });
+function mapRole(roleName: string): UserRole {
+  const normalizedRole = roleName?.toLowerCase();
 
-  saveToken(response.token);
-  saveAuthUser(response.user);
+  if (
+    normalizedRole === "artista" ||
+    normalizedRole === "artist" ||
+    normalizedRole === "rol_artista"
+  ) {
+    return "artist";
+  }
 
-  return response;
+  return "listener";
 }
 
-export async function register(payload: RegisterPayload) {
-  const response = await apiRequest<AuthResponse>("/auth/register", {
+function bytesToBase64(bytes: number[]) {
+  let binary = "";
+
+  bytes.forEach((byte) => {
+    binary += String.fromCharCode(byte);
+  });
+
+  return window.btoa(binary);
+}
+
+function normalizeProfilePhoto(profilePhoto?: string | number[] | null) {
+  if (!profilePhoto) return undefined;
+
+  if (typeof profilePhoto === "string") {
+    if (profilePhoto.startsWith("data:image")) {
+      return profilePhoto;
+    }
+
+    return `data:image/jpeg;base64,${profilePhoto}`;
+  }
+
+  if (Array.isArray(profilePhoto)) {
+    return `data:image/jpeg;base64,${bytesToBase64(profilePhoto)}`;
+  }
+
+  return undefined;
+}
+
+function mapBackendUserToAuthUser(
+  response: BackendUserResponse,
+  email: string,
+): AuthUser {
+  return {
+    id: response.userId,
+    name: response.userName,
+    email,
+    role: mapRole(response.roleName),
+    profilePhoto: normalizeProfilePhoto(response.profilePhoto),
+  };
+}
+
+export async function login(payload: LoginPayload): Promise<AuthResponse> {
+  try {
+    const response = await apiRequest<BackendUserResponse>("/user/login", {
+      method: "POST",
+      body: {
+        email: payload.usernameOrEmail,
+        password: payload.password,
+      },
+      auth: false,
+    });
+
+    const user = mapBackendUserToAuthUser(response, payload.usernameOrEmail);
+
+    saveAuthUser(user);
+
+    return {
+      token: "flowy-session",
+      user,
+    };
+  } catch {
+    throw new Error("Correo o contraseña incorrectos.");
+  }
+}
+
+export async function register(payload: RegisterPayload): Promise<AuthResponse> {
+  const response = await apiRequest<BackendUserResponse>("/user/register", {
     method: "POST",
-    body: payload,
+    body: {
+      name: payload.name,
+      email: payload.email,
+      password: payload.password,
+    },
     auth: false,
   });
 
-  saveToken(response.token);
-  saveAuthUser(response.user);
+  const user = mapBackendUserToAuthUser(response, payload.email);
 
-  return response;
+  saveAuthUser(user);
+
+  return {
+    token: "flowy-session",
+    user,
+  };
 }
 
 export async function getCurrentUserRequest() {
-  return apiRequest<AuthUser>("/users/me");
+  const storedUser = getStoredAuthUser();
+
+  if (!storedUser) {
+    throw new Error("No hay usuario guardado");
+  }
+
+  return storedUser;
 }
 
 export function saveAuthUser(user: AuthUser) {

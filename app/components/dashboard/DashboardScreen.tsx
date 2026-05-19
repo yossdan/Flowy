@@ -416,12 +416,20 @@ export default function DashboardScreen({
 
                       <Link
                         href="/perfil"
-                        className="grid h-10 w-10 place-items-center rounded-full bg-white/10 ring-1 ring-white/10 hover:bg-white/15 cursor-pointer"
+                        className="grid h-10 w-10 place-items-center overflow-hidden rounded-full bg-white/10 ring-1 ring-white/10 hover:bg-white/15 cursor-pointer"
                         aria-label="Ir al perfil"
                       >
-                        <span className="text-xs font-extrabold">
-                          {displayUserName.slice(0, 1).toUpperCase()}
-                        </span>
+                        {user?.profilePhoto ? (
+                          <img
+                            src={user.profilePhoto}
+                            alt="Foto de perfil"
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          <span className="text-xs font-extrabold">
+                            {displayUserName.slice(0, 1).toUpperCase()}
+                          </span>
+                        )}
                       </Link>
                     </div>
                   </div>
