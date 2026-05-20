@@ -1,11 +1,11 @@
-package Model.controller.role_new.service;
+package Model.controller.role.service;
 
 
-import Model.controller.role_new.dto.response.RoleResponseDto;
-import Model.controller.role_new.service.component.RoleRegistrationComponent;
-import Model.controller.role_new.service.component.RoleRemoveComponent;
-import Model.controller.role_new.service.component.RoleSearchComponent;
-import Model.controller.role_new.service.component.RoleUpdateComponent;
+import Model.controller.role.dto.response.RoleResponseDto;
+import Model.controller.role.service.component.RoleRegistrationComponent;
+import Model.controller.role.service.component.RoleRemoveComponent;
+import Model.controller.role.service.component.RoleSearchComponent;
+import Model.controller.role.service.component.RoleUpdateComponent;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 

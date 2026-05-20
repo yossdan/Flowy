@@ -1,4 +1,4 @@
-package Model.controller.role_new;
+package Model.controller.role;
 
 public class RoleController {
 }

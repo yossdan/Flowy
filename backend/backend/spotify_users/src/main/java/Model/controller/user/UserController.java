@@ -2,6 +2,7 @@ package Model.controller.user;
 
 import Model.controller.user.dto.request.LoginUserRequestDto;
 import Model.controller.user.dto.request.RegisterUserRequestDto;
+import Model.controller.user.dto.request.UpdateUserRequestDto;
 import Model.controller.user.dto.response.LoginUserResponseDto;
 import Model.controller.user.dto.response.RegisterUserResponseDto;
 import Model.controller.user.dto.response.UserProfilePhotoResponseDto;
@@ -52,6 +53,15 @@ public class UserController {
         LoginUserResponseDto response = userService.loginUser(dto);
 
         return ResponseEntity.ok(response);
+    }
+
+    @PutMapping("/update")
+    public ResponseEntity<Void> updateUser(
+            @Valid @RequestBody UpdateUserRequestDto dto) {
+
+        userService.updateUser(dto);
+
+        return ResponseEntity.noContent().build();
     }
 
 }

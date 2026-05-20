@@ -1,11 +1,13 @@
 package Model.controller.user.repository;
 
 
-import Model.controller.role_new.entities.RoleEntity;
+import Model.controller.role.entities.RoleEntity;
 import Model.controller.user.dto.request.RegisterUserRequestDto;
+import Model.controller.user.dto.request.UpdateUserRequestDto;
 import Model.controller.user.entities.UserEntity;
 import Model.controller.user.exception.UserException;
 import Model.util.CryptoUtil;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
@@ -46,5 +48,15 @@ public class UserQueryRepository {
 
     public List<UserEntity> findUsersByIds(List<UUID> userIds){
         return  repository.findAllById(userIds);
+    }
+
+    @Transactional
+    public void updateUser(UpdateUserRequestDto dto, RoleEntity roleEntity){
+        Optional<UserEntity> optionalUserEntity = repository.findById(dto.userId());
+        if(optionalUserEntity.isPresent()){
+            UserEntity userEntity = optionalUserEntity.get();
+            userEntity.setRoleId(roleEntity);
+            repository.save(userEntity);
+        }
     }
 }

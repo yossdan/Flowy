@@ -1,4 +1,4 @@
-package Model.controller.role_new.dto.response;
+package Model.controller.role.dto.response;
 
 import java.util.UUID;
 
