@@ -246,19 +246,36 @@ export default function DashboardScreen({
   const openArtistStudio = () => setView("artist");
 
   const becomeArtist = async () => {
-    try {
-      const response = await becomeArtistRequest();
+    if (!user || !user.id) {
+      alert("Error: No se encontró una sesión de usuario activa.");
+      return;
+    }
 
+    try {
+      const userIdStr = user.id; 
+      const artistNameStr = user.name || userName || "Artista Anónimo";
+
+      const response = await becomeArtistRequest(userIdStr, artistNameStr);
+
+      // 1. Actualizamos el contexto global de Auth
+      const updatedUser = {
+        ...user,
+        role: response.role, // "artist"
+      };
+      setUser(updatedUser);
+
+      // Si guardas la sesión en localStorage en tu proyecto, asegúrate de actualizarla aquí:
+      // localStorage.setItem("user", JSON.stringify(updatedUser));
+
+      // 2. Forzamos el estado local a "artist"
       setUserRole("artist");
 
-      if (user) {
-        setUser({
-          ...user,
-          role: response.role,
-        });
-      }
-
+      // 3. Forzamos a que el renderizado se limpie cambiando la pestaña a "todo"
+      setTab("todo"); 
+      
+      // 4. Mandamos al usuario directamente al panel de artista
       setView("artist");
+
     } catch (error) {
       alert(
         error instanceof Error

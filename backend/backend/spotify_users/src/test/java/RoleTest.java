@@ -11,5 +11,6 @@ public class RoleTest {
     @Test
     void registerRole(){
         registration.registerRole("Artista");
+        registration.registerRole("Usuario");
     }
 }

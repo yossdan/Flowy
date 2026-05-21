@@ -1,12 +1,14 @@
 package Model.controller.artist_new;
-
 import Model.controller.artist_new.dto.request.RegisterArtistRequestDto;
 import Model.controller.artist_new.service.ArtistService;
-import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-@Controller
+import java.util.HashMap;
+import java.util.Map;
+
+@RestController
 @RequestMapping("/artists")
 public class ArtistController {
 
@@ -15,11 +17,14 @@ public class ArtistController {
     public ArtistController(ArtistService service) {
         this.service = service;
     }
+
     @PostMapping("/create")
-    public String createArtist(@ModelAttribute RegisterArtistRequestDto dto) {
+    public ResponseEntity<Map<String, String>> createArtist(@RequestBody RegisterArtistRequestDto dto) {
         service.createArtist(dto);
-        return "redirect:/artists";
+        
+        Map<String, String> response = new HashMap<>();
+        response.put("role", "Artista");
+        
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
-
-
 }
