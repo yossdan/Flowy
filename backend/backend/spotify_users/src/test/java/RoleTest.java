@@ -8,8 +8,10 @@ import org.springframework.boot.test.context.SpringBootTest;
 public class RoleTest {
     @Autowired
     RoleRegistrationComponent registration;
+
     @Test
-    void registerRole(){
+    void registerRole() {
         registration.registerRole("Artista");
+        registration.registerRole("Usuario");
     }
 }
