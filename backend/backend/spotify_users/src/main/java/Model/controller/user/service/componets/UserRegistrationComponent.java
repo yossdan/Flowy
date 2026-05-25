@@ -1,8 +1,8 @@
 package Model.controller.user.service.componets;
 
 
-import Model.controller.role_new.entities.RoleEntity;
-import Model.controller.role_new.repository.RoleQueryRepository;
+import Model.controller.role.entities.RoleEntity;
+import Model.controller.role.repository.RoleQueryRepository;
 import Model.controller.user.dto.request.LoginUserRequestDto;
 import Model.controller.user.dto.request.RegisterUserRequestDto;
 import Model.controller.user.dto.response.LoginUserResponseDto;

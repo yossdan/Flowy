@@ -1,9 +1,9 @@
-package Model.controller.role_new.service.component;
+package Model.controller.role.service.component;
 
 
-import Model.controller.role_new.dto.response.RoleResponseDto;
-import Model.controller.role_new.entities.RoleEntity;
-import Model.controller.role_new.repository.RoleQueryRepository;
+import Model.controller.role.dto.response.RoleResponseDto;
+import Model.controller.role.entities.RoleEntity;
+import Model.controller.role.repository.RoleQueryRepository;
 import org.springframework.stereotype.Component;
 
 import java.util.List;

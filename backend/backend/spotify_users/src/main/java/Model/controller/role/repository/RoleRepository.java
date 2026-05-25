@@ -1,7 +1,7 @@
-package Model.controller.role_new.repository;
+package Model.controller.role.repository;
 
 
-import Model.controller.role_new.entities.RoleEntity;
+import Model.controller.role.entities.RoleEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;

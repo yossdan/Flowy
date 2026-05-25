@@ -11,6 +11,8 @@ import java.util.UUID;
 public interface ArtistRepository extends JpaRepository<ArtistEntity, UUID> {
     boolean existsByName(String name);
 
+	boolean existsByUserId(UUID userId);
+	
     List<ArtistEntity> findAllByNameContainingIgnoreCase(String name);
 
     Optional<ArtistEntity> findByUserId(UUID userId);

@@ -1,4 +1,4 @@
-package Model.controller.role_new.entities;
+package Model.controller.role.entities;
 
 import Model.controller.user.entities.UserEntity;
 import jakarta.persistence.*;

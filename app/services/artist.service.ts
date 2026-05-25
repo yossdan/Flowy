@@ -1,10 +1,29 @@
 import { apiFormRequest, apiRequest } from "@/app/services/http.service";
 import type { PublishedAlbum } from "@/app/types/dashboard";
 
-export async function becomeArtistRequest() {
-  return apiRequest<{ role: "artist" }>("/users/me/become-artist", {
-    method: "POST",
-  });
+// app/services/artist.service.ts
+export async function becomeArtistRequest(userId: string, artistName: string) {
+  try {
+    const response = await fetch("http://localhost:8082/artists/create", { 
+      method: "POST",
+      body: JSON.stringify({
+        userId: userId,     // <-- Coincide con 'UUID userId' en Java
+        artistName: artistName // <-- ¡OJO! Debe llamarse 'artistName' exactamente
+      }),
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Error en el servidor: ${response.status}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Error al convertirse en artista:", error);
+    throw error;
+  }
 }
 
 export async function becomeListenerRequest() {

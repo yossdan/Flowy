@@ -1,12 +1,11 @@
-package Model.controller.role_new.repository;
+package Model.controller.role.repository;
 
 
-import Model.controller.role_new.entities.RoleEntity;
-import Model.controller.role_new.exception.RoleException;
+import Model.controller.role.entities.RoleEntity;
+import Model.controller.role.exception.RoleException;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Repository;
 
-import javax.management.relation.Role;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;

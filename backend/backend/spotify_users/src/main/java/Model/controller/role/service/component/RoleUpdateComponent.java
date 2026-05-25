@@ -1,4 +1,4 @@
-package Model.controller.role_new.service.component;
+package Model.controller.role.service.component;
 
 import org.springframework.stereotype.Component;
 

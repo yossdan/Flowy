@@ -1,6 +1,6 @@
-package Model.controller.role_new.service.component;
+package Model.controller.role.service.component;
 
-import Model.controller.role_new.repository.RoleRepository;
+import Model.controller.role.repository.RoleRepository;
 import org.springframework.stereotype.Component;
 
 import java.util.UUID;

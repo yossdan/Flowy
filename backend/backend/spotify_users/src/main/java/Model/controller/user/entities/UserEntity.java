@@ -3,7 +3,7 @@ package Model.controller.user.entities;
 
 import Model.controller.playlist.entities.PlaylistEntity;
 
-import Model.controller.role_new.entities.RoleEntity;
+import Model.controller.role.entities.RoleEntity;
 import jakarta.persistence.*;
 
 import java.time.OffsetDateTime;

@@ -7,6 +7,7 @@ import Model.controller.artist_new.entities.ArtistEntity;
 import Model.controller.artist_new.exception.ArtistException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Collection;
 import java.util.List;
@@ -21,10 +22,11 @@ public class ArtistQueryRepository {
     public ArtistQueryRepository(ArtistRepository repository) {
         this.repository = repository;
     }
-
+	
+	@Transactional
     public void createArtist(RegisterArtistRequestDto dto) {
 
-        if(repository.existsById(dto.userId())) {
+        if(repository.existsByUserId(dto.userId())) {
             throw new ArtistException("Este usuario ya está registrado como artista en nuestra plataforma. Si deseas gestionar tu perfil, ve a la configuración de tu cuenta o contacta con soporte si crees que hay un error.");
         }
         if(repository.existsByName(dto.artistName())) {

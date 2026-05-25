@@ -6,15 +6,10 @@ import java.util.UUID;
 
 public record UpdateUserRequestDto(
         UUID userId,
-        String userName,
-        String email,
-        String password,
-        MultipartFile file
+        String userName
 ) {
 
 
-    public UpdateUserRequestDto(UUID userId, String userName, String email, String password) {
-        this(userId, userName, email, password, null);
-    }
+
 
 }
