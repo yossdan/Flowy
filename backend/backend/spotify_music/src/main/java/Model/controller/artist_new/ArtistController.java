@@ -1,4 +1,5 @@
 package Model.controller.artist_new;
+
 import Model.controller.artist_new.dto.request.RegisterArtistRequestDto;
 import Model.controller.artist_new.service.ArtistService;
 import org.springframework.http.HttpStatus;
@@ -21,10 +22,10 @@ public class ArtistController {
     @PostMapping("/create")
     public ResponseEntity<Map<String, String>> createArtist(@RequestBody RegisterArtistRequestDto dto) {
         service.createArtist(dto);
-        
+
         Map<String, String> response = new HashMap<>();
-        response.put("role", "Artista");
-        
+        response.put("role", "artist");
+
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 }
