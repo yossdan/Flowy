@@ -1,6 +1,5 @@
 package Model.controller.artist;
 
-
 import Model.controller.artist.service.ArtistService;
 import Model.controller.users.dto.request.UserProfilePhotoRequestDto;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,14 +17,15 @@ public class ArtistController {
 
     @Autowired
     private ArtistService artistService;
-    public ArtistController( ArtistService artistService) {
+
+    public ArtistController(ArtistService artistService) {
         this.artistService = artistService;
     }
 
     @PostMapping("/download/artistProfilePhoto")
     public ResponseEntity<Map<UUID, byte[]>> getArtistProfilePhoto(
-            @RequestBody List<UserProfilePhotoRequestDto> userProfilePhotoRequestDto){
-        Map<UUID, byte[]> artistProfilePhoto =  artistService.getArtistProfilePhoto(userProfilePhotoRequestDto);
+            @RequestBody List<UserProfilePhotoRequestDto> userProfilePhotoRequestDto) {
+        Map<UUID, byte[]> artistProfilePhoto = artistService.getArtistProfilePhoto(userProfilePhotoRequestDto);
         return ResponseEntity.ok(artistProfilePhoto);
     }
 

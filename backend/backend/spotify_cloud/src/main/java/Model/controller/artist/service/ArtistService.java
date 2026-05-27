@@ -1,6 +1,5 @@
 package Model.controller.artist.service;
 
-
 import Model.config.CloudflareR2Properties;
 import Model.controller.users.dto.request.UserProfilePhotoRequestDto;
 import org.springframework.stereotype.Service;
@@ -26,7 +25,6 @@ public class ArtistService {
         this.properties = properties;
     }
 
-
     public byte[] getProfilePhoto(String profilePhotoObjectKey) {
         GetObjectRequest request = GetObjectRequest.builder()
                 .bucket(properties.getBucket())
@@ -37,13 +35,13 @@ public class ArtistService {
         return objectBytes.asByteArray();
     }
 
-    public Map<UUID, byte[]> getArtistProfilePhoto(List<UserProfilePhotoRequestDto> userProfilePhotoRequestDto){
+    public Map<UUID, byte[]> getArtistProfilePhoto(List<UserProfilePhotoRequestDto> userProfilePhotoRequestDto) {
         return userProfilePhotoRequestDto.stream()
                 .collect(Collectors.toMap(
                         UserProfilePhotoRequestDto::userId,
                         user -> getProfilePhoto(user.profilePhotoObjectKey()),
                         (u1, u2) -> u1,
-                        HashMap::new
-                ));
+                        HashMap::new));
     }
+
 }
