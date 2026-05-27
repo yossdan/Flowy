@@ -1,35 +1,59 @@
 import { apiFormRequest, apiRequest } from "@/app/services/http.service";
 import type { PublishedAlbum } from "@/app/types/dashboard";
 
-// app/services/artist.service.ts
-export async function becomeArtistRequest(userId: string, artistName: string) {
-  try {
-    const response = await fetch("http://localhost:8082/artists/create", { 
-      method: "POST",
-      body: JSON.stringify({
-        userId: userId,     // <-- Coincide con 'UUID userId' en Java
-        artistName: artistName // <-- ¡OJO! Debe llamarse 'artistName' exactamente
-      }),
-      headers: {
-        "Content-Type": "application/json",
-      },
-    });
+const ARTIST_API_URL = "http://localhost:8082";
 
-    if (!response.ok) {
-      throw new Error(`Error en el servidor: ${response.status}`);
-    }
+export async function checkArtistStatusRequest(userId: string) {
+  const response = await fetch(`${ARTIST_API_URL}/artists/exists/${userId}`, {
+    method: "GET",
+    cache: "no-store",
+  });
 
-    return await response.json();
-  } catch (error) {
-    console.error("Error al convertirse en artista:", error);
-    throw error;
+  if (!response.ok) {
+    throw new Error(`Error validando artista: ${response.status}`);
   }
+
+  return response.json() as Promise<{
+    isArtist: boolean;
+    role?: "artist" | "listener";
+  }>;
 }
 
-export async function becomeListenerRequest() {
-  return apiRequest<{ role: "listener" }>("/users/me/become-listener", {
+export async function becomeArtistRequest(userId: string, artistName: string) {
+  const response = await fetch(`${ARTIST_API_URL}/artists/create`, {
     method: "POST",
+    body: JSON.stringify({
+      userId,
+      artistName,
+    }),
+    headers: {
+      "Content-Type": "application/json",
+    },
   });
+
+  if (!response.ok) {
+    throw new Error(`Error en el servidor: ${response.status}`);
+  }
+
+  return response.json() as Promise<{
+    role?: "artist";
+    isArtist?: boolean;
+  }>;
+}
+
+export async function becomeListenerRequest(userId: string) {
+  const response = await fetch(`${ARTIST_API_URL}/artists/delete-by-user/${userId}`, {
+    method: "DELETE",
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    throw new Error(`Error al dejar de ser artista: ${response.status}`);
+  }
+
+  return {
+    role: "listener" as const,
+  };
 }
 
 export type UploadAlbumTrack = {

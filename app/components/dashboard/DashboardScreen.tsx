@@ -17,6 +17,8 @@ import ArtistStudio from "@/app/components/artist/ArtistStudio";
 import AuthGuard from "@/app/components/auth/AuthGuard";
 import { useAuth } from "@/app/context/AuthContext";
 import WelcomeIntro from "@/app/components/dashboard/WelcomeIntro";
+import { getStoredAuthUser } from "@/app/services/auth.service";
+
 import type {
   MixItem,
   Song,
@@ -29,7 +31,10 @@ import type {
 import {
   becomeArtistRequest,
   becomeListenerRequest,
+  checkArtistStatusRequest,
 } from "@/app/services/artist.service";
+
+import { saveAuthUser } from "@/app/services/auth.service";
 
 type LibraryFilter = "todo" | "playlists" | "artistas" | "albumes";
 
@@ -55,9 +60,11 @@ export default function DashboardScreen({
   const router = useRouter();
   const contentKey = `${view}-${tab}`;
   const { user, logoutUser, setUser } = useAuth();
+  const storedUser = getStoredAuthUser();
+  const authUser = user ?? storedUser;
 
-  const displayUserName = user?.name || userName;
-  const displayUserRole = user?.role ?? "listener";
+  const displayUserName = authUser?.name || userName;
+  const displayUserRole = authUser?.role ?? "listener";
 
   const [selectedPlaylist, setSelectedPlaylist] =
     useState<PlayerPlaylist | null>(null);
@@ -94,6 +101,41 @@ export default function DashboardScreen({
   useEffect(() => {
     setUserRole(displayUserRole);
   }, [displayUserRole]);
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const currentUser = user;
+    const userId = currentUser.id;
+
+    let cancelled = false;
+
+    async function validateArtistStatus() {
+      try {
+        const response = await checkArtistStatusRequest(userId);
+
+        if (cancelled) return;
+
+        const nextRole: UserRole = response.isArtist ? "artist" : "listener";
+
+        const updatedUser = {
+          ...currentUser,
+          role: nextRole,
+        };
+
+        setUserRole(nextRole);
+        setUser(updatedUser);
+        saveAuthUser(updatedUser);
+      } catch (error) {
+        console.warn("No se pudo validar el estado de artista:", error);
+      }
+    }
+
+    validateArtistStatus();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user, setUser]);
 
   const [publishedAlbums, setPublishedAlbums] = useState<PublishedAlbum[]>([]);
 
@@ -246,36 +288,29 @@ export default function DashboardScreen({
   const openArtistStudio = () => setView("artist");
 
   const becomeArtist = async () => {
-    if (!user || !user.id) {
+    const currentUser = user ?? getStoredAuthUser();
+
+    if (!currentUser || !currentUser.id) {
       alert("Error: No se encontró una sesión de usuario activa.");
       return;
     }
 
     try {
-      const userIdStr = user.id; 
-      const artistNameStr = user.name || userName || "Artista Anónimo";
+      await becomeArtistRequest(
+        currentUser.id,
+        currentUser.name || userName || "Artista Anónimo",
+      );
 
-      const response = await becomeArtistRequest(userIdStr, artistNameStr);
-
-      // 1. Actualizamos el contexto global de Auth
       const updatedUser = {
-        ...user,
-        role: response.role, // "artist"
+        ...currentUser,
+        role: "artist" as const,
       };
+
       setUser(updatedUser);
-
-      // Si guardas la sesión en localStorage en tu proyecto, asegúrate de actualizarla aquí:
-      // localStorage.setItem("user", JSON.stringify(updatedUser));
-
-      // 2. Forzamos el estado local a "artist"
+      saveAuthUser(updatedUser);
       setUserRole("artist");
-
-      // 3. Forzamos a que el renderizado se limpie cambiando la pestaña a "todo"
-      setTab("todo"); 
-      
-      // 4. Mandamos al usuario directamente al panel de artista
+      setTab("todo");
       setView("artist");
-
     } catch (error) {
       alert(
         error instanceof Error
@@ -292,18 +327,29 @@ export default function DashboardScreen({
 
     if (!confirmed) return;
 
+    const currentUser = user ?? getStoredAuthUser();
+
     try {
-      const response = await becomeListenerRequest();
+      const currentUser = user ?? getStoredAuthUser();
 
-      setUserRole("listener");
-
-      if (user) {
-        setUser({
-          ...user,
-          role: response.role,
-        });
+      if (!currentUser?.id) {
+        alert("Error: No se encontró una sesión de usuario activa.");
+        return;
       }
 
+      await becomeListenerRequest(currentUser.id);
+
+      if (currentUser) {
+        const updatedUser = {
+          ...currentUser,
+          role: "listener" as const,
+        };
+
+        setUser(updatedUser);
+        saveAuthUser(updatedUser);
+      }
+
+      setUserRole("listener");
       setView("home");
     } catch (error) {
       alert(

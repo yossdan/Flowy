@@ -32,20 +32,24 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
 
-  const [user, setUser] = useState<AuthUser | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(() => {
+    if (typeof window === "undefined") return null;
+    return getStoredAuthUser();
+  });
+
   const [loading, setLoading] = useState(true);
 
   async function refreshUser() {
-    if (!isLoggedIn()) {
-      setUser(null);
-      setLoading(false);
-      return null;
-    }
-
     const storedUser = getStoredAuthUser();
 
     if (storedUser) {
       setUser(storedUser);
+    }
+
+    if (!isLoggedIn()) {
+      setUser(null);
+      setLoading(false);
+      return null;
     }
 
     if (!getApiUrl()) {
@@ -65,6 +69,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (storedUser) {
         setUser(storedUser);
+        setLoading(false);
         return storedUser;
       }
 
@@ -93,7 +98,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     () => ({
       user,
       loading,
-      isAuthenticated: Boolean(user) || isLoggedIn(),
+      isAuthenticated: Boolean(user) && isLoggedIn(),
       setUser,
       refreshUser,
       logoutUser,
