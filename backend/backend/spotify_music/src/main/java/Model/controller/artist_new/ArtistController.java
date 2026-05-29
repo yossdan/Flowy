@@ -30,10 +30,7 @@ public class ArtistController {
 
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
-<<<<<<< HEAD
-}
-=======
-
+    
     @GetMapping("/searchAll")
     public ResponseEntity<List<ArtistResponseDto>> findAllArtists() {
         List<ArtistResponseDto> artists = service.findAllArtists();
@@ -50,4 +47,4 @@ public class ArtistController {
         return ResponseEntity.ok(artists);
     }
 }
->>>>>>> update/artist
+
