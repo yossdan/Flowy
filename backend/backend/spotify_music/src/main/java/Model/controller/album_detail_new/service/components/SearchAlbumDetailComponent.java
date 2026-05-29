@@ -8,6 +8,7 @@ import Model.controller.album_detail_new.util.AlbumArtistMapper;
 import Model.controller.album_detail_new.util.AlbumMusicCloudFetcher;
 import Model.controller.album_new.entities.AlbumEntity;
 import Model.controller.album_new.repository.AlbumQueryRepository;
+import Model.controller.search.enums.SearchType;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -55,7 +56,7 @@ public class SearchAlbumDetailComponent {
                     .orElse(null);
 
             byte[] coverImage = albumPhotosFromCloud.get(coverImageObjectKey);
-            return new SongSearchResponseDto(song.getId(),song.getTitle(),nameArtist,coverImage);
+            return new SongSearchResponseDto(song.getId(),song.getTitle(),nameArtist,coverImage, SearchType.SONG);
         }).toList();
     }
     public byte[] getSongById(UUID songId){
