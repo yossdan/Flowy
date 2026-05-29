@@ -46,4 +46,7 @@ public class ArtistController {
 
         return ResponseEntity.ok(artists);
     }
+
+
+
 }
