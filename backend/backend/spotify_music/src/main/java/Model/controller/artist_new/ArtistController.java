@@ -11,6 +11,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+@CrossOrigin(origins = "*")
 @RestController
 @RequestMapping("/artists")
 public class ArtistController {
@@ -30,11 +31,7 @@ public class ArtistController {
 
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
-<<<<<<< HEAD
-    
-=======
 
->>>>>>> fixed/search
     @GetMapping("/searchAll")
     public ResponseEntity<List<ArtistResponseDto>> findAllArtists() {
         List<ArtistResponseDto> artists = service.findAllArtists();
