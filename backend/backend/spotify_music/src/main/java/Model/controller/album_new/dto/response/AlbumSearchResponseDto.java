@@ -1,5 +1,7 @@
 package Model.controller.album_new.dto.response;
 
+import Model.controller.search.enums.SearchType;
+
 import java.util.Arrays;
 import java.util.UUID;
 
@@ -7,7 +9,8 @@ public record AlbumSearchResponseDto(
         UUID id,
         String title,
         String nameArtist,
-        byte[] coverImage
+        byte[] coverImage,
+        SearchType type
 
 ) {
     @Override
@@ -17,6 +20,7 @@ public record AlbumSearchResponseDto(
                 ", title='" + title + '\'' +
                 ", nameArtist='" + nameArtist + '\'' +
                 ", coverImage=" + Arrays.toString(coverImage) +
+                ", type=" + type +
                 '}';
     }
 }

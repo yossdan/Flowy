@@ -7,6 +7,7 @@ import Model.controller.album_new.repository.AlbumQueryRepository;
 import Model.controller.album_new.util.AlbumCoverCloudFetcher;
 import Model.controller.artist_new.entities.ArtistEntity;
 import Model.controller.artist_new.repository.ArtistQueryRepository;
+import Model.controller.search.enums.SearchType;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -44,7 +45,7 @@ public class SearchAlbumComponent {
                         .findFirst()
                         .orElse(null);
 
-                return new AlbumSearchResponseDto(album.getId(), album.getTitle(),artistName,coverImage);
+                return new AlbumSearchResponseDto(album.getId(), album.getTitle(),artistName,coverImage, SearchType.ALBUM);
             }).toList();
         }
         return  new ArrayList<>();
