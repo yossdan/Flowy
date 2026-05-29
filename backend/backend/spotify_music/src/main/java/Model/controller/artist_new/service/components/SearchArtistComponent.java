@@ -5,6 +5,7 @@ import Model.controller.artist_new.dto.response.ArtistResponseDto;
 import Model.controller.artist_new.entities.ArtistEntity;
 import Model.controller.artist_new.repository.ArtistQueryRepository;
 import Model.controller.artist_new.utils.ArtistPhotoCloudService;
+import Model.controller.search.enums.SearchType;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -31,7 +32,7 @@ public class SearchArtistComponent {
             return artists.stream()
                     .map(entity -> {
                         byte [] profilePhoto = profilePhotos.get(entity.getId());
-                        return new ArtistResponseDto(entity.getId(), entity.getName(), profilePhoto);
+                        return new ArtistResponseDto(entity.getId(), entity.getName(), profilePhoto, SearchType.ARTIST);
                     }).toList();
         }
         return new ArrayList<>();
@@ -46,7 +47,7 @@ public class SearchArtistComponent {
             return artists.stream()
                     .map(entity -> {
                         byte [] profilePhoto = profilePhotos.get(entity.getUserId());
-                        return new ArtistResponseDto(entity.getId(), entity.getName(), profilePhoto);
+                        return new ArtistResponseDto(entity.getId(), entity.getName(), profilePhoto, SearchType.ARTIST);
                     }).toList();
         }
 
