@@ -9,9 +9,12 @@ import {
   canContinuePerfil,
 } from "../registro/validators";
 import { register } from "@/app/services/auth.service";
+import { saveToken } from "@/app/services/http.service";
+import { useAuth } from "@/app/context/AuthContext";
 
 export function useRegistroForm() {
   const router = useRouter();
+  const { setUser } = useAuth();
 
   const [step, setStep] = useState<RegistroStep>(0);
   const [email, setEmail] = useState("");
@@ -59,10 +62,22 @@ export function useRegistroForm() {
     }
 
     return false;
-  }, [step, email, pass, nombre, dia, mes, anio, genero, aceptaTerminos, loading]);
+  }, [
+    step,
+    email,
+    pass,
+    nombre,
+    dia,
+    mes,
+    anio,
+    genero,
+    aceptaTerminos,
+    loading,
+  ]);
 
   function next() {
     if (!canContinue) return;
+
     setServerError("");
     setStep((current) => Math.min(3, current + 1) as RegistroStep);
   }
@@ -73,7 +88,7 @@ export function useRegistroForm() {
   }
 
   async function empezar() {
-    if (!aceptaTerminos) return;
+    if (!aceptaTerminos || loading) return;
 
     try {
       setLoading(true);
@@ -84,7 +99,7 @@ export function useRegistroForm() {
         "0",
       )}-${dia.padStart(2, "0")}`;
 
-      await register({
+      const response = await register({
         email: email.trim(),
         password: pass,
         name: nombre.trim(),
@@ -93,7 +108,10 @@ export function useRegistroForm() {
         acceptedTerms: aceptaTerminos,
       });
 
-      router.push("/dashboard");
+      saveToken(response.token);
+      setUser(response.user);
+
+      router.replace("/dashboard");
     } catch (error) {
       setServerError(
         error instanceof Error
