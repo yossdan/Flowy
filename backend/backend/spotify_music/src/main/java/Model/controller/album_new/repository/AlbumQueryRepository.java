@@ -39,4 +39,7 @@ public class AlbumQueryRepository {
     public List<AlbumEntity> findAlbumsByIds(Set<UUID> albumIds){
         return repository.findAllById(albumIds);
     }
+    public List<AlbumEntity> getAlbumsByArtistId(ArtistEntity artistId){
+        return repository.findAllByArtistId(artistId);
+    }
 }

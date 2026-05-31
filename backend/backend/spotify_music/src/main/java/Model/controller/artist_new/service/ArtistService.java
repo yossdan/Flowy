@@ -1,6 +1,7 @@
 package Model.controller.artist_new.service;
 
 import Model.controller.artist_new.dto.request.RegisterArtistRequestDto;
+import Model.controller.artist_new.dto.response.ArtistDetailResponseDto;
 import Model.controller.artist_new.dto.response.ArtistResponseDto;
 import Model.controller.artist_new.service.components.CreateArtistComponent;
 import Model.controller.artist_new.service.components.SearchArtistComponent;
@@ -39,6 +40,9 @@ public class ArtistService {
 
     public List<ArtistResponseDto> findAllArtistsByName(String keyword) {
         return searchArtistComponent.searchAllArtistsByName(keyword);
+    }
+    public ArtistDetailResponseDto getArtistDetails(UUID artistId){
+        return searchArtistComponent.getArtistDetails(artistId);
     }
 
 }

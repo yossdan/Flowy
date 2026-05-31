@@ -1,5 +1,11 @@
 package Model.controller.artist_new.service.components;
 
+import Model.controller.album_detail_new.dto.response.SongsTopResponseDto;
+import Model.controller.album_detail_new.service.components.SearchAlbumDetailComponent;
+import Model.controller.album_new.dto.response.AlbumResponseDto;
+import Model.controller.album_new.entities.AlbumEntity;
+import Model.controller.album_new.service.component.SearchAlbumComponent;
+import Model.controller.artist_new.dto.response.ArtistDetailResponseDto;
 import Model.controller.artist_new.dto.response.ArtistResponseDto;
 import Model.controller.artist_new.entities.ArtistEntity;
 import Model.controller.artist_new.repository.ArtistQueryRepository;
@@ -16,11 +22,15 @@ import java.util.UUID;
 @Component
 public class SearchArtistComponent {
     private final ArtistQueryRepository repository;
+    private final SearchAlbumComponent  searchAlbumComponent;
+    private final SearchAlbumDetailComponent searchAlbumDetailComponent;
     private final ArtistPhotoCloudService profilePhotoService;
 
     @Autowired
-    public SearchArtistComponent(ArtistQueryRepository repository, ArtistPhotoCloudService profilePhotoService) {
+    public SearchArtistComponent(ArtistQueryRepository repository, SearchAlbumComponent searchAlbumComponent, SearchAlbumDetailComponent searchAlbumDetailComponent, ArtistPhotoCloudService profilePhotoService) {
         this.repository = repository;
+        this.searchAlbumComponent = searchAlbumComponent;
+        this.searchAlbumDetailComponent = searchAlbumDetailComponent;
         this.profilePhotoService = profilePhotoService;
     }
 
@@ -62,4 +72,20 @@ public class SearchArtistComponent {
 
         return new ArrayList<>();
     }
+
+    public ArtistDetailResponseDto getArtistDetails(UUID artistId){
+        ArtistEntity artistEntity = repository.getArtistById(artistId);
+        List<AlbumEntity> albumsEntities = searchAlbumComponent.getAlbumsByArtistId(artistEntity);
+        Map<String, byte[]> albumPhotos = searchAlbumComponent.fetchAlbumCoversFromCloud(albumsEntities);
+        List<AlbumResponseDto> albumsResponse = albumsEntities.stream()
+            .map(albumEntity -> {
+                UUID id = albumEntity.getId();
+                String title = albumEntity.getTitle();
+                byte[] coverPhoto = albumPhotos.get(title);
+                List<SongsTopResponseDto> bestSongsByAlbum = searchAlbumDetailComponent.findBestSongsByAlbum(albumEntity);
+                return new AlbumResponseDto(id, title, coverPhoto, bestSongsByAlbum);
+            }).toList();
+        return new ArtistDetailResponseDto(artistEntity.getName(), albumsResponse);
+    }
+
 }

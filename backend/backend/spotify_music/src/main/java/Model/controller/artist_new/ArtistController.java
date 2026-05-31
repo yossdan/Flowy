@@ -1,6 +1,7 @@
 package Model.controller.artist_new;
 
 import Model.controller.artist_new.dto.request.RegisterArtistRequestDto;
+import Model.controller.artist_new.dto.response.ArtistDetailResponseDto;
 import Model.controller.artist_new.dto.response.ArtistResponseDto;
 import Model.controller.artist_new.service.ArtistService;
 import org.springframework.http.HttpStatus;
@@ -58,6 +59,14 @@ public class ArtistController {
 
         return ResponseEntity.ok(artists);
     }
+
+    @GetMapping("/details/{artistId}")
+    public ResponseEntity<ArtistDetailResponseDto> getArtistDetails(@PathVariable UUID artistId) {
+        ArtistDetailResponseDto artistDetails = service.getArtistDetails(artistId);
+
+        return ResponseEntity.ok(artistDetails);
+    }
+
 
     @DeleteMapping("/delete-by-user/{userId}")
     public ResponseEntity<Void> deleteArtistByUserId(@PathVariable UUID userId) {

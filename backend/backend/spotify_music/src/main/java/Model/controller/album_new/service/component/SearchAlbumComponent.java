@@ -50,4 +50,11 @@ public class SearchAlbumComponent {
         }
         return  new ArrayList<>();
     }
+    public List<AlbumEntity> getAlbumsByArtistId(ArtistEntity artistId) {
+        return albumQueryRepository.getAlbumsByArtistId(artistId);
+    }
+    public Map<String, byte[]> fetchAlbumCoversFromCloud(List<AlbumEntity> albumEntities){
+        return  albumCoverCloudFetcher.fetchAlbumCoversFromCloud(albumEntities);
+    }
+
 }
