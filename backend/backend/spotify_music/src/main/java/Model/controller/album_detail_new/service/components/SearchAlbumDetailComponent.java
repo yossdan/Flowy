@@ -2,13 +2,14 @@ package Model.controller.album_detail_new.service.components;
 
 
 import Model.controller.album_detail_new.dto.response.SongSearchResponseDto;
-import Model.controller.album_detail_new.dto.response.SongsTopResponseDto;
+import Model.controller.album_detail_new.dto.response.SongsResponseDto;
 import Model.controller.album_detail_new.entities.AlbumDetailEntity;
 import Model.controller.album_detail_new.repository.AlbumDetailQueryRepository;
 import Model.controller.album_detail_new.util.AlbumArtistMapper;
 import Model.controller.album_detail_new.util.AlbumMusicCloudFetcher;
 import Model.controller.album_new.entities.AlbumEntity;
 import Model.controller.album_new.repository.AlbumQueryRepository;
+import Model.controller.artist_new.entities.ArtistEntity;
 import Model.controller.search.enums.SearchType;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -65,9 +66,17 @@ public class SearchAlbumDetailComponent {
         return cloudClient.getSong(songEntity.getAudioObjectKey());
     }
 
-    public List<SongsTopResponseDto> findBestSongsByAlbum(AlbumEntity album){
+    public List<SongsResponseDto> findBestSongsByAlbum(AlbumEntity album){
         return repository.findTop2ByAlbum(album).stream()
-                .map(albumDetailEntity -> new SongsTopResponseDto(albumDetailEntity.getId(), albumDetailEntity.getTitle()))
+                .map(albumDetailEntity -> new SongsResponseDto(albumDetailEntity.getId(), albumDetailEntity.getTitle()))
+                .collect(Collectors.toList());
+    }
+
+    public List<SongsResponseDto> findAllSongsByAlbum(UUID albumId){
+        AlbumEntity albumEntity = albumQueryRepository.getAlbumById(albumId);
+        List<AlbumDetailEntity> songs = repository.findAllSongsByAlbum(albumEntity);
+        return songs.stream()
+                .map(song -> new SongsResponseDto(song.getId(), song.getTitle()))
                 .collect(Collectors.toList());
     }
 }

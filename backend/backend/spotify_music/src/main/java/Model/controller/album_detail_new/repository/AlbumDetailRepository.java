@@ -10,4 +10,6 @@ import java.util.UUID;
 public interface AlbumDetailRepository extends JpaRepository<AlbumDetailEntity, UUID> {
     List<AlbumDetailEntity> findByTitleStartingWithIgnoreCase(String keyword);
     List<AlbumDetailEntity> findTop2ByAlbumId(AlbumEntity albumId);
+
+    List<AlbumDetailEntity> getAllByAlbumId(AlbumEntity albumId);
 }

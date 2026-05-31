@@ -2,14 +2,14 @@ package Model.controller.album_detail_new.dto.response;
 
 import java.util.UUID;
 
-public class SongsTopResponseDto {
+public class SongsResponseDto {
     private UUID songId;
     private String songTitle;
 
-    public SongsTopResponseDto() {
+    public SongsResponseDto() {
     }
 
-    public SongsTopResponseDto(UUID songId, String songTitle) {
+    public SongsResponseDto(UUID songId, String songTitle) {
         this.songId = songId;
         this.songTitle = songTitle;
     }

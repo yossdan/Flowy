@@ -1,6 +1,6 @@
 package Model.controller.artist_new.service.components;
 
-import Model.controller.album_detail_new.dto.response.SongsTopResponseDto;
+import Model.controller.album_detail_new.dto.response.SongsResponseDto;
 import Model.controller.album_detail_new.service.components.SearchAlbumDetailComponent;
 import Model.controller.album_new.dto.response.AlbumResponseDto;
 import Model.controller.album_new.entities.AlbumEntity;
@@ -82,7 +82,7 @@ public class SearchArtistComponent {
                 UUID id = albumEntity.getId();
                 String title = albumEntity.getTitle();
                 byte[] coverPhoto = albumPhotos.get(title);
-                List<SongsTopResponseDto> bestSongsByAlbum = searchAlbumDetailComponent.findBestSongsByAlbum(albumEntity);
+                List<SongsResponseDto> bestSongsByAlbum = searchAlbumDetailComponent.findBestSongsByAlbum(albumEntity);
                 return new AlbumResponseDto(id, title, coverPhoto, bestSongsByAlbum);
             }).toList();
         return new ArtistDetailResponseDto(artistEntity.getName(), albumsResponse);
