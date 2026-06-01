@@ -1,18 +1,18 @@
 package Model.controller.album_new.dto.request;
 
-
-
-
 import Model.controller.album_detail_new.dto.request.SongRequestDto;
 
 import java.util.List;
 import java.util.UUID;
 
 public class CreateAlbumRequestDto {
+
     private UUID userId;
     private String title;
-
     private List<SongRequestDto> songs;
+
+    public CreateAlbumRequestDto() {
+    }
 
     public CreateAlbumRequestDto(UUID userId, String title, List<SongRequestDto> songs) {
         this.userId = userId;
@@ -40,10 +40,6 @@ public class CreateAlbumRequestDto {
     public void setTitle(String title) {
         this.title = title;
     }
-
-
-
-
 
     public List<SongRequestDto> getSongs() {
         return songs;

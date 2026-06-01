@@ -1,6 +1,5 @@
 package Model.controller.album_detail_new.dto.request;
 
-
 import Model.controller.song_artist_new.dto.request.ArtistIdRequestDto;
 import Model.controller.song_genre_new.dto.request.GenreIdRequestDto;
 
@@ -12,9 +11,15 @@ public class SongRequestDto {
     private List<ArtistIdRequestDto> artistIds;
     private List<GenreIdRequestDto> genreIds;
 
+    public SongRequestDto() {
+        this.artistIds = new ArrayList<>();
+        this.genreIds = new ArrayList<>();
+    }
+
     public SongRequestDto(String title) {
         this.title = title;
         this.artistIds = new ArrayList<>();
+        this.genreIds = new ArrayList<>();
     }
 
     public SongRequestDto(String title, List<GenreIdRequestDto> genreIds) {
