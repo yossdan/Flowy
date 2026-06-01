@@ -9,7 +9,6 @@ import {
   type ReactNode,
 } from "react";
 import type { Song } from "@/app/types/dashboard";
-import { dashboardMock } from "@/app/lib/dashboard.mock";
 import { getApiUrl } from "@/app/services/http.service";
 import {
   addSongToPlaylistRequest,
@@ -114,33 +113,6 @@ function hasBackend() {
   return Boolean(getApiUrl());
 }
 
-function getInitialPlaylists(): PlayerPlaylist[] {
-  return dashboardMock.playlists.map((playlist) => ({
-    id: playlist.id,
-    title: playlist.title,
-    subtitle: playlist.subtitle,
-    icon: playlist.icon,
-    coverImage: playlist.coverImage ?? null,
-    songs: playlist.songs,
-  }));
-}
-
-function getInitialSongs(): Song[] {
-  const map = new Map<string, Song>();
-
-  dashboardMock.likedSongs.forEach((song) => {
-    map.set(song.id, song);
-  });
-
-  dashboardMock.playlists.forEach((playlist) => {
-    playlist.songs.forEach((song) => {
-      map.set(song.id, song);
-    });
-  });
-
-  return Array.from(map.values());
-}
-
 function safeParse<T>(value: string | null, fallback: T): T {
   if (!value) return fallback;
 
@@ -181,8 +153,8 @@ function mergeSongs(baseSongs: Song[], playlists: PlayerPlaylist[]) {
 }
 
 export function PlayerProvider({ children }: { children: ReactNode }) {
-  const initialSongs = useMemo(() => getInitialSongs(), []);
-  const initialPlaylists = useMemo(() => getInitialPlaylists(), []);
+  const initialSongs = useMemo<Song[]>(() => [], []);
+  const initialPlaylists = useMemo<PlayerPlaylist[]>(() => [], []);
 
   const [songs, setSongs] = useState<Song[]>(initialSongs);
   const [queue, setQueue] = useState<Song[]>(initialSongs);
@@ -195,16 +167,9 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const [shuffle, setShuffle] = useState(false);
   const [repeat, setRepeat] = useState(false);
 
-  const [likedIds, setLikedIds] = useState<string[]>(
-    dashboardMock.likedSongs.map((song) => song.id),
-  );
+  const [likedIds, setLikedIds] = useState<string[]>([]);
 
-  const [savedIds, setSavedIds] = useState<string[]>(
-    initialPlaylists.flatMap((playlist) =>
-      playlist.songs.map((song) => song.id),
-    ),
-  );
-
+  const [savedIds, setSavedIds] = useState<string[]>([]);
   const [playlists, setPlaylists] =
     useState<PlayerPlaylist[]>(initialPlaylists);
 

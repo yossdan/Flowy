@@ -18,6 +18,10 @@ import AuthGuard from "@/app/components/auth/AuthGuard";
 import { useAuth } from "@/app/context/AuthContext";
 import WelcomeIntro from "@/app/components/dashboard/WelcomeIntro";
 import { getStoredAuthUser } from "@/app/services/auth.service";
+import {
+  searchRequest,
+  type FrontSearchResponse,
+} from "@/app/services/search.service";
 
 import type {
   MixItem,
@@ -69,6 +73,13 @@ export default function DashboardScreen({
   const [selectedPlaylist, setSelectedPlaylist] =
     useState<PlayerPlaylist | null>(null);
   const [search, setSearch] = useState("");
+  const [backendSearch, setBackendSearch] = useState<FrontSearchResponse>({
+    artists: [],
+    albums: [],
+    songs: [],
+  });
+
+  const [searching, setSearching] = useState(false);
   const [libraryFilter, setLibraryFilter] = useState<LibraryFilter>("todo");
   const [showCreatePlaylistModal, setShowCreatePlaylistModal] = useState(false);
   const [showEditPlaylistModal, setShowEditPlaylistModal] = useState(false);
@@ -102,10 +113,15 @@ export default function DashboardScreen({
     setUserRole(displayUserRole);
   }, [displayUserRole]);
   useEffect(() => {
-    if (!user?.id) return;
+    if (!authUser?.id) return;
 
-    const currentUser = user;
-    const userId = currentUser.id;
+    const safeUser = {
+      ...authUser,
+      id: authUser.id,
+      role: authUser.role ?? "listener",
+    };
+
+    const userId = safeUser.id;
 
     let cancelled = false;
 
@@ -117,14 +133,17 @@ export default function DashboardScreen({
 
         const nextRole: UserRole = response.isArtist ? "artist" : "listener";
 
-        const updatedUser = {
-          ...currentUser,
-          role: nextRole,
-        };
-
         setUserRole(nextRole);
-        setUser(updatedUser);
-        saveAuthUser(updatedUser);
+
+        if (safeUser.role !== nextRole) {
+          const updatedUser = {
+            ...safeUser,
+            role: nextRole,
+          };
+
+          setUser(updatedUser);
+          saveAuthUser(updatedUser);
+        }
       } catch (error) {
         console.warn("No se pudo validar el estado de artista:", error);
       }
@@ -135,8 +154,7 @@ export default function DashboardScreen({
     return () => {
       cancelled = true;
     };
-  }, [user, setUser]);
-
+  }, [authUser?.id, authUser?.role, setUser]);
   const [publishedAlbums, setPublishedAlbums] = useState<PublishedAlbum[]>([]);
 
   const [showWelcomeIntro, setShowWelcomeIntro] = useState(() => {
@@ -164,6 +182,40 @@ export default function DashboardScreen({
   }, [playlists, selectedPlaylist?.id, setView]);
 
   const searchValue = search.trim().toLowerCase();
+  useEffect(() => {
+    const cleanSearch = search.trim();
+
+    if (cleanSearch.length < 2) {
+      setBackendSearch({
+        artists: [],
+        albums: [],
+        songs: [],
+      });
+      return;
+    }
+
+    const timeout = window.setTimeout(async () => {
+      try {
+        setSearching(true);
+
+        const response = await searchRequest(cleanSearch);
+
+        setBackendSearch(response);
+      } catch (error) {
+        console.warn("No se pudo buscar en backend:", error);
+
+        setBackendSearch({
+          artists: [],
+          albums: [],
+          songs: [],
+        });
+      } finally {
+        setSearching(false);
+      }
+    }, 350);
+
+    return () => window.clearTimeout(timeout);
+  }, [search]);
 
   const filteredLikedSongs = likedSongs.filter((song) => {
     if (!searchValue) return true;
@@ -220,15 +272,17 @@ export default function DashboardScreen({
     })),
   );
 
-  const searchSongs = [...likedSongs, ...allPlaylistSongs].filter((song) => {
-    if (!searchValue) return false;
+  const localSearchSongs = [...likedSongs, ...allPlaylistSongs].filter(
+    (song) => {
+      if (!searchValue) return false;
 
-    return (
-      song.title.toLowerCase().includes(searchValue) ||
-      song.artist.toLowerCase().includes(searchValue) ||
-      song.album.toLowerCase().includes(searchValue)
-    );
-  });
+      return (
+        song.title.toLowerCase().includes(searchValue) ||
+        song.artist.toLowerCase().includes(searchValue) ||
+        song.album.toLowerCase().includes(searchValue)
+      );
+    },
+  );
 
   const searchPlaylists = playlists.filter((playlist) => {
     if (!searchValue) return false;
@@ -239,39 +293,18 @@ export default function DashboardScreen({
     );
   });
 
-  const searchArtists = [
-    "Rammstein",
-    "The Weeknd",
-    "Feid",
-    "Drake",
-    "Kanye West",
-    "Metro Boomin",
-    "Travis Scott",
-    "Daniel Caesar",
-    "Don Toliver",
-  ].filter((artist, index, array) => {
-    if (array.indexOf(artist) !== index) return false;
-    if (!searchValue) return false;
+  const searchSongs = [...backendSearch.songs, ...localSearchSongs].filter(
+    (song, index, array) =>
+      array.findIndex((item) => item.id === song.id) === index,
+  );
 
-    return artist.toLowerCase().includes(searchValue);
-  });
+  const searchArtists = backendSearch.artists.filter(
+    (artist, index, array) => array.indexOf(artist) === index,
+  );
 
-  const searchAlbums = [
-    "After Hours",
-    "Starboy",
-    "Views",
-    "UTOPIA",
-    "Mutter",
-    "Scorpion",
-    "More Life",
-    "NEVER ENOUGH",
-    "OCTANE",
-  ].filter((album, index, array) => {
-    if (array.indexOf(album) !== index) return false;
-    if (!searchValue) return false;
-
-    return album.toLowerCase().includes(searchValue);
-  });
+  const searchAlbums = backendSearch.albums.filter(
+    (album, index, array) => array.indexOf(album) === index,
+  );
 
   const hasSearchResults =
     searchSongs.length > 0 ||
@@ -290,16 +323,13 @@ export default function DashboardScreen({
   const becomeArtist = async () => {
     const currentUser = user ?? getStoredAuthUser();
 
-    if (!currentUser || !currentUser.id) {
+    if (!currentUser?.id) {
       alert("Error: No se encontró una sesión de usuario activa.");
       return;
     }
 
     try {
-      await becomeArtistRequest(
-        currentUser.id,
-        currentUser.name || userName || "Artista Anónimo",
-      );
+      await becomeArtistRequest(currentUser.id, currentUser.name);
 
       const updatedUser = {
         ...currentUser,
@@ -309,13 +339,11 @@ export default function DashboardScreen({
       setUser(updatedUser);
       saveAuthUser(updatedUser);
       setUserRole("artist");
-      setTab("todo");
-      setView("artist");
     } catch (error) {
       alert(
         error instanceof Error
           ? error.message
-          : "No se pudo cambiar a artista.",
+          : "No se pudo convertir la cuenta en artista.",
       );
     }
   };
@@ -329,26 +357,21 @@ export default function DashboardScreen({
 
     const currentUser = user ?? getStoredAuthUser();
 
+    if (!currentUser?.id) {
+      alert("Error: No se encontró una sesión de usuario activa.");
+      return;
+    }
+
     try {
-      const currentUser = user ?? getStoredAuthUser();
-
-      if (!currentUser?.id) {
-        alert("Error: No se encontró una sesión de usuario activa.");
-        return;
-      }
-
       await becomeListenerRequest(currentUser.id);
 
-      if (currentUser) {
-        const updatedUser = {
-          ...currentUser,
-          role: "listener" as const,
-        };
+      const updatedUser = {
+        ...currentUser,
+        role: "listener" as const,
+      };
 
-        setUser(updatedUser);
-        saveAuthUser(updatedUser);
-      }
-
+      setUser(updatedUser);
+      saveAuthUser(updatedUser);
       setUserRole("listener");
       setView("home");
     } catch (error) {
@@ -359,9 +382,10 @@ export default function DashboardScreen({
       );
     }
   };
-  const publishAlbum = (album: PublishedAlbum) => {
+
+  function handleAlbumPublished(album: PublishedAlbum) {
     setPublishedAlbums((prev) => [album, ...prev]);
-  };
+  }
 
   const openPlaylist = (playlist: PlayerPlaylist) => {
     setSelectedPlaylist(playlist);
@@ -540,13 +564,14 @@ export default function DashboardScreen({
                         />
                       )}
 
-                      {view === "artist" && (
+                      {view === "artist" && authUser && (
                         <ArtistStudio
+                          userId={authUser.id}
                           userName={displayUserName}
                           isArtist={isArtist}
                           onBecomeArtist={becomeArtist}
                           onBecomeListener={becomeListener}
-                          onAlbumPublished={publishAlbum}
+                          onAlbumPublished={handleAlbumPublished}
                         />
                       )}
                       {view === "playlist" && selectedPlaylist && (
@@ -967,6 +992,7 @@ function HomeContent({
                       title={song.title}
                       artist={song.artist}
                       album={song.album}
+                      cover={song.cover}
                       onClick={() => playSong(song, searchSongs)}
                     />
                   ))}
@@ -1186,6 +1212,7 @@ function HomeContent({
                 title={song.title}
                 artist={song.artist}
                 album={song.album}
+                cover={song.cover}
                 onClick={() => playSong(song, recentlyPlayed)}
               />
             ))}
@@ -1207,6 +1234,7 @@ function HomeContent({
                 title={song.title}
                 artist={song.artist}
                 album={song.album}
+                cover={song.cover}
                 onClick={() => playSong(song, mostPlayedSongs)}
               />
             ))}
@@ -1232,6 +1260,7 @@ function HomeContent({
                 title={song.title}
                 artist={song.artist}
                 album={song.album}
+                cover={song.cover}
                 onClick={() => playSong(song, recommendedSongs)}
               />
             ))}
@@ -1427,61 +1456,60 @@ function LibraryContent({
 }
 
 function ArtistGrid() {
-  const artists = [
-    "Rammstein",
-    "The Weeknd",
-    "Feid",
-    "Drake",
-    "Kanye West",
-    "Metro Boomin",
-  ];
+  const artists: string[] = [];
 
   return (
     <div>
       <RowHeader title="Artistas favoritos" right="Ver todos" />
 
-      <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-6">
-        {artists.map((artist) => (
-          <button
-            key={artist}
-            className="group rounded-2xl bg-white/6 p-4 text-center ring-1 ring-white/10 transition hover:bg-white/10 cursor-pointer"
-          >
-            <div className="mx-auto grid h-20 w-20 place-items-center rounded-full bg-gradient-to-br from-[#7a0f2b]/40 to-white/5 ring-1 ring-white/10">
-              <i className="fa-solid fa-microphone-lines text-2xl text-white/75" />
-            </div>
+      {artists.length > 0 ? (
+        <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-6">
+          {artists.map((artist) => (
+            <button
+              key={artist}
+              className="group rounded-2xl bg-white/6 p-4 text-center ring-1 ring-white/10 transition hover:bg-white/10 cursor-pointer"
+            >
+              <div className="mx-auto grid h-20 w-20 place-items-center rounded-full bg-gradient-to-br from-[#7a0f2b]/40 to-white/5 ring-1 ring-white/10">
+                <i className="fa-solid fa-microphone-lines text-2xl text-white/75" />
+              </div>
 
-            <div className="mt-3 truncate text-sm font-bold">{artist}</div>
-            <div className="text-xs text-white/50">Artista</div>
-          </button>
-        ))}
-      </div>
+              <div className="mt-3 truncate text-sm font-bold">{artist}</div>
+              <div className="text-xs text-white/50">Artista</div>
+            </button>
+          ))}
+        </div>
+      ) : (
+        <EmptyLibraryState
+          title="Aún no hay artistas"
+          text="Cuando guardes o busques artistas, aparecerán aquí."
+        />
+      )}
     </div>
   );
 }
 
 function AlbumGrid() {
-  const albums = [
-    "After Hours",
-    "Starboy",
-    "Views",
-    "UTOPIA",
-    "Mutter",
-    "Scorpion",
-  ];
+  const albums: string[] = [];
 
   return (
     <div>
       <RowHeader title="Álbumes guardados" right="Ver todos" />
 
-      <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-6">
-        {albums.map((album) => (
-          <SearchAlbumCard key={album} title={album} />
-        ))}
-      </div>
+      {albums.length > 0 ? (
+        <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-6">
+          {albums.map((album) => (
+            <SearchAlbumCard key={album} title={album} />
+          ))}
+        </div>
+      ) : (
+        <EmptyLibraryState
+          title="Aún no hay álbumes"
+          text="Cuando guardes álbumes, aparecerán aquí."
+        />
+      )}
     </div>
   );
 }
-
 function RowHeader({ title, right }: { title: string; right: string }) {
   return (
     <div className="flex items-center justify-between">
@@ -1692,11 +1720,13 @@ function SearchSongCard({
   title,
   artist,
   album,
+  cover,
   onClick,
 }: {
   title: string;
   artist: string;
   album: string;
+  cover?: string | null;
   onClick?: () => void;
 }) {
   return (
@@ -1704,8 +1734,14 @@ function SearchSongCard({
       onClick={onClick}
       className="group flex items-center gap-4 rounded-2xl bg-white/6 p-3 text-left ring-1 ring-white/10 transition hover:bg-white/10 cursor-pointer"
     >
-      <div className="grid h-14 w-14 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-[#7a0f2b]/40 to-black ring-1 ring-white/10">
-        <i className="fa-solid fa-music text-white/70" />
+      <div className="h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-gradient-to-br from-[#7a0f2b]/40 to-black ring-1 ring-white/10">
+        {cover ? (
+          <img src={cover} alt={title} className="h-full w-full object-cover" />
+        ) : (
+          <div className="grid h-full w-full place-items-center">
+            <i className="fa-solid fa-music text-white/70" />
+          </div>
+        )}
       </div>
 
       <div className="min-w-0 flex-1">

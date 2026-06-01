@@ -1,4 +1,3 @@
-import { apiFormRequest, apiRequest } from "@/app/services/http.service";
 import type { PublishedAlbum } from "@/app/types/dashboard";
 
 const ARTIST_API_URL = "http://localhost:8082";
@@ -32,7 +31,16 @@ export async function becomeArtistRequest(userId: string, artistName: string) {
   });
 
   if (!response.ok) {
-    throw new Error(`Error en el servidor: ${response.status}`);
+    let message = `Error en el servidor: ${response.status}`;
+
+    try {
+      const errorBody = await response.json();
+      message = errorBody.message ?? errorBody.error ?? message;
+    } catch {
+      // El backend puede responder sin JSON.
+    }
+
+    throw new Error(message);
   }
 
   return response.json() as Promise<{
@@ -42,10 +50,13 @@ export async function becomeArtistRequest(userId: string, artistName: string) {
 }
 
 export async function becomeListenerRequest(userId: string) {
-  const response = await fetch(`${ARTIST_API_URL}/artists/delete-by-user/${userId}`, {
-    method: "DELETE",
-    cache: "no-store",
-  });
+  const response = await fetch(
+    `${ARTIST_API_URL}/artists/delete-by-user/${userId}`,
+    {
+      method: "DELETE",
+      cache: "no-store",
+    },
+  );
 
   if (!response.ok) {
     throw new Error(`Error al dejar de ser artista: ${response.status}`);
@@ -60,9 +71,11 @@ export type UploadAlbumTrack = {
   title: string;
   audioFile: File;
   collaboratorIds: string[];
+  genreIds?: string[];
 };
 
 export type UploadAlbumPayload = {
+  userId: string;
   albumName: string;
   coverFile: File;
   tracks: UploadAlbumTrack[];
@@ -71,23 +84,140 @@ export type UploadAlbumPayload = {
 export async function uploadAlbumRequest(payload: UploadAlbumPayload) {
   const formData = new FormData();
 
-  formData.append("albumName", payload.albumName);
+  const albumDto = {
+    userId: payload.userId,
+    title: payload.albumName,
+    songs: payload.tracks.map((track) => ({
+      title: track.title,
+      artistIds: track.collaboratorIds.map((artistId) => ({
+        artistId,
+      })),
+      genreIds: (track.genreIds ?? []).map((genreId) => ({
+        genreId,
+      })),
+    })),
+  };
+
+  formData.append(
+    "album",
+    new Blob([JSON.stringify(albumDto)], {
+      type: "application/json",
+    }),
+  );
+
   formData.append("coverFile", payload.coverFile);
 
-  payload.tracks.forEach((track, index) => {
-    formData.append(`tracks[${index}].title`, track.title);
-    formData.append(`tracks[${index}].audioFile`, track.audioFile);
-
-    track.collaboratorIds.forEach((collaboratorId) => {
-      formData.append(`tracks[${index}].collaboratorIds`, collaboratorId);
-    });
+  payload.tracks.forEach((track) => {
+    formData.append("songFiles", track.audioFile);
   });
 
-  return apiFormRequest<PublishedAlbum>("/albums", formData, {
+  const response = await fetch(`${ARTIST_API_URL}/album/create`, {
     method: "POST",
+    body: formData,
   });
+
+if (!response.ok) {
+  const errorText = await response.text();
+
+  console.error("Error backend /album/create:", {
+    status: response.status,
+    body: errorText,
+  });
+
+  throw new Error(
+    errorText || `Error al publicar álbum: ${response.status}`,
+  );
 }
 
-export async function getMyPublishedAlbumsRequest() {
-  return apiRequest<PublishedAlbum[]>("/artists/me/albums");
+  return response.json() as Promise<PublishedAlbum>;
+}
+
+export async function getMyPublishedAlbumsRequest(userId: string) {
+  const response = await fetch(`${ARTIST_API_URL}/album/my-albums/${userId}`, {
+    method: "GET",
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    throw new Error(`Error cargando álbumes publicados: ${response.status}`);
+  }
+
+  return response.json() as Promise<PublishedAlbum[]>;
+}
+
+export type ArtistSearchItem = {
+  id: string;
+  name: string;
+  type?: string;
+};
+
+export async function searchArtistsRequest(
+  keyword: string,
+): Promise<ArtistSearchItem[]> {
+  const cleanKeyword = keyword.trim();
+
+  if (!cleanKeyword) {
+    return [];
+  }
+
+  const response = await fetch(
+    `${ARTIST_API_URL}/artists/searchByName?keyword=${encodeURIComponent(
+      cleanKeyword,
+    )}`,
+    {
+      method: "GET",
+      cache: "no-store",
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error(`Error buscando artistas: ${response.status}`);
+  }
+
+  const artists = (await response.json()) as unknown[];
+
+  return artists
+    .map((artist) => {
+      const item = artist as Record<string, unknown>;
+
+      const id =
+        item.id ??
+        item.artistId ??
+        item.userId ??
+        item.artist_id ??
+        "";
+
+      const name =
+        item.name ??
+        item.artistName ??
+        item.userName ??
+        item.title ??
+        "Artista";
+
+      return {
+        id: String(id),
+        name: String(name),
+        type: item.type ? String(item.type) : undefined,
+      };
+    })
+    .filter((artist) => artist.id && artist.name);
+}
+
+export async function getAllArtistsRequest() {
+  const response = await fetch(`${ARTIST_API_URL}/artists/searchAll`, {
+    method: "GET",
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    throw new Error(`Error cargando artistas: ${response.status}`);
+  }
+
+  return response.json() as Promise<
+    {
+      id: string;
+      name: string;
+      type?: string;
+    }[]
+  >;
 }

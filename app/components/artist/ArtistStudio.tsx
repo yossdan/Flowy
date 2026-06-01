@@ -1,29 +1,24 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type {
   ArtistCollaborator,
   ArtistUploadTrack,
   PublishedAlbum,
 } from "@/app/types/dashboard";
-import { uploadAlbumRequest } from "@/app/services/artist.service";
+import {
+  searchArtistsRequest,
+  uploadAlbumRequest,
+} from "@/app/services/artist.service";
 
 type ArtistStudioProps = {
+  userId: string;
   userName: string;
   isArtist: boolean;
   onBecomeArtist: () => void;
   onBecomeListener: () => void;
   onAlbumPublished?: (album: PublishedAlbum) => void;
 };
-
-const mockCollaborators: ArtistCollaborator[] = [
-  { id: "artist-1", name: "The Weeknd" },
-  { id: "artist-2", name: "Feid" },
-  { id: "artist-3", name: "Drake" },
-  { id: "artist-4", name: "Metro Boomin" },
-  { id: "artist-5", name: "Travis Scott" },
-  { id: "artist-6", name: "Daniel Caesar" },
-];
 
 function createEmptyTrack(): ArtistUploadTrack {
   return {
@@ -35,6 +30,7 @@ function createEmptyTrack(): ArtistUploadTrack {
 }
 
 export default function ArtistStudio({
+  userId,
   userName,
   isArtist,
   onBecomeArtist,
@@ -47,29 +43,66 @@ export default function ArtistStudio({
   const [tracks, setTracks] = useState<ArtistUploadTrack[]>([
     createEmptyTrack(),
   ]);
+
   const [collaboratorSearch, setCollaboratorSearch] = useState("");
+  const [collaborators, setCollaborators] = useState<ArtistCollaborator[]>([]);
+  const [searchingCollaborators, setSearchingCollaborators] = useState(false);
+
   const [toast, setToast] = useState("");
   const [publishing, setPublishing] = useState(false);
 
   const cleanAlbumName = albumName.trim();
 
-  const filteredCollaborators = useMemo(() => {
-    const value = collaboratorSearch.trim().toLowerCase();
-
-    if (!value) return mockCollaborators;
-
-    return mockCollaborators.filter((artist) =>
-      artist.name.toLowerCase().includes(value),
-    );
-  }, [collaboratorSearch]);
-
   const canSubmit =
     isArtist &&
+    Boolean(userId) &&
     cleanAlbumName.length > 0 &&
     Boolean(coverFile) &&
     tracks.length > 0 &&
     tracks.every((track) => track.title.trim().length > 0 && track.audioFile) &&
     !publishing;
+
+  const selectedCollaboratorIds = useMemo(() => {
+    return new Set(
+      tracks.flatMap((track) =>
+        track.collaborators.map((collaborator) => collaborator.id),
+      ),
+    );
+  }, [tracks]);
+
+  useEffect(() => {
+    if (!isArtist) return;
+
+    const cleanSearch = collaboratorSearch.trim();
+
+    if (cleanSearch.length < 2) {
+      setCollaborators([]);
+      return;
+    }
+
+    const timeout = window.setTimeout(async () => {
+      try {
+        setSearchingCollaborators(true);
+
+        const artists = await searchArtistsRequest(cleanSearch);
+
+        setCollaborators(
+          artists
+            .filter((artist) => artist.id !== userId)
+            .map((artist) => ({
+              id: artist.id,
+              name: artist.name,
+            })),
+        );
+      } catch {
+        setCollaborators([]);
+      } finally {
+        setSearchingCollaborators(false);
+      }
+    }, 350);
+
+    return () => window.clearTimeout(timeout);
+  }, [collaboratorSearch, isArtist, userId]);
 
   function showMessage(message: string) {
     setToast(message);
@@ -85,6 +118,7 @@ export default function ArtistStudio({
     setCoverPreview(null);
     setTracks([createEmptyTrack()]);
     setCollaboratorSearch("");
+    setCollaborators([]);
   }
 
   function handleCoverChange(file: File | undefined) {
@@ -175,6 +209,11 @@ export default function ArtistStudio({
   }
 
   async function handleSubmit() {
+    if (!userId) {
+      showMessage("No se pudo identificar tu usuario.");
+      return;
+    }
+
     if (!coverFile) {
       showMessage("Agrega la portada del álbum.");
       return;
@@ -189,12 +228,14 @@ export default function ArtistStudio({
       setPublishing(true);
 
       const publishedAlbum = await uploadAlbumRequest({
+        userId,
         albumName: cleanAlbumName,
         coverFile,
         tracks: tracks.map((track) => ({
           title: track.title.trim(),
           audioFile: track.audioFile as File,
           collaboratorIds: track.collaborators.map((artist) => artist.id),
+          genreIds: [],
         })),
       });
 
@@ -233,7 +274,7 @@ export default function ArtistStudio({
 
               <button
                 onClick={onBecomeArtist}
-                className="mt-6 inline-flex items-center gap-3 rounded-full bg-white px-6 py-3 text-sm font-black text-black transition hover:bg-white/90 active:scale-95 cursor-pointer"
+                className="mt-6 inline-flex cursor-pointer items-center gap-3 rounded-full bg-white px-6 py-3 text-sm font-black text-black transition hover:bg-white/90 active:scale-95"
               >
                 <i className="fa-solid fa-wand-magic-sparkles" />
                 Convertirme en artista
@@ -304,7 +345,7 @@ export default function ArtistStudio({
           <button
             type="button"
             onClick={onBecomeListener}
-            className="inline-flex shrink-0 items-center justify-center gap-2 rounded-full bg-white/10 px-5 py-3 text-sm font-black text-white ring-1 ring-white/10 transition hover:bg-white/15 active:scale-95 cursor-pointer"
+            className="inline-flex shrink-0 cursor-pointer items-center justify-center gap-2 rounded-full bg-white/10 px-5 py-3 text-sm font-black text-white ring-1 ring-white/10 transition hover:bg-white/15 active:scale-95"
           >
             <i className="fa-solid fa-user" />
             Dejar de ser artista
@@ -371,7 +412,7 @@ export default function ArtistStudio({
                   setCoverFile(null);
                   setCoverPreview(null);
                 }}
-                className="mt-3 w-full rounded-full bg-white/10 px-4 py-3 text-sm font-bold text-white ring-1 ring-white/10 transition hover:bg-white/15 cursor-pointer"
+                className="mt-3 w-full cursor-pointer rounded-full bg-white/10 px-4 py-3 text-sm font-bold text-white ring-1 ring-white/10 transition hover:bg-white/15"
               >
                 Quitar portada
               </button>
@@ -390,7 +431,7 @@ export default function ArtistStudio({
 
             <button
               onClick={addTrack}
-              className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-3 text-sm font-black text-black transition hover:bg-white/90 active:scale-95 cursor-pointer"
+              className="inline-flex cursor-pointer items-center gap-2 rounded-full bg-white px-4 py-3 text-sm font-black text-black transition hover:bg-white/90 active:scale-95"
             >
               <i className="fa-solid fa-plus text-xs" />
               Agregar canción
@@ -417,7 +458,7 @@ export default function ArtistStudio({
                   <button
                     onClick={() => removeTrack(track.id)}
                     disabled={tracks.length === 1}
-                    className="grid h-9 w-9 place-items-center rounded-full bg-red-500/10 text-red-200 ring-1 ring-red-500/20 transition hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-35 cursor-pointer"
+                    className="grid h-9 w-9 cursor-pointer place-items-center rounded-full bg-red-500/10 text-red-200 ring-1 ring-red-500/20 transition hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-35"
                     aria-label="Eliminar canción"
                   >
                     <i className="fa-solid fa-trash text-xs" />
@@ -478,18 +519,18 @@ export default function ArtistStudio({
                       <input
                         value={collaboratorSearch}
                         onChange={(e) => setCollaboratorSearch(e.target.value)}
-                        placeholder="Buscar colaborador"
+                        placeholder="Buscar artista colaborador"
                         className="w-full bg-transparent text-sm outline-none placeholder:text-white/35"
                       />
                     </div>
 
                     {track.collaborators.length > 0 && (
                       <div className="mt-3 flex flex-wrap gap-2">
-                        {track.collaborators.map((artist) => (
+                        {track.collaborators.map((artist, index) => (
                           <button
-                            key={artist.id}
+                            key={artist.id || `${artist.name}-${index}`}
                             onClick={() => toggleCollaborator(track.id, artist)}
-                            className="inline-flex items-center gap-2 rounded-full bg-[#7a0f2b]/25 px-3 py-2 text-xs font-bold text-white ring-1 ring-[#7a0f2b]/40 cursor-pointer"
+                            className="inline-flex cursor-pointer items-center gap-2 rounded-full bg-[#7a0f2b]/25 px-3 py-2 text-xs font-bold text-white ring-1 ring-[#7a0f2b]/40"
                           >
                             {artist.name}
                             <i className="fa-solid fa-xmark text-white/60" />
@@ -499,42 +540,63 @@ export default function ArtistStudio({
                     )}
 
                     <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                      {filteredCollaborators.map((artist) => {
-                        const active = track.collaborators.some(
-                          (item) => item.id === artist.id,
-                        );
+                      {searchingCollaborators && (
+                        <div className="col-span-full rounded-2xl bg-white/5 p-3 text-sm font-semibold text-white/50 ring-1 ring-white/10">
+                          Buscando artistas...
+                        </div>
+                      )}
+                      {!searchingCollaborators &&
+                        collaboratorSearch.trim().length >= 2 &&
+                        collaborators.length === 0 && (
+                          <div className="col-span-full rounded-2xl bg-white/5 p-3 text-sm font-semibold text-white/50 ring-1 ring-white/10">
+                            No se encontraron artistas.
+                          </div>
+                        )}
+                      {!searchingCollaborators &&
+                        collaborators.map((artist, index) => {
+                          const active = track.collaborators.some(
+                            (item) => item.id === artist.id,
+                          );
 
-                        return (
-                          <button
-                            key={artist.id}
-                            type="button"
-                            onClick={() => toggleCollaborator(track.id, artist)}
-                            className={[
-                              "flex items-center gap-3 rounded-2xl p-3 text-left ring-1 transition cursor-pointer",
-                              active
-                                ? "bg-[#7a0f2b]/25 ring-[#7a0f2b]/50"
-                                : "bg-white/5 ring-white/10 hover:bg-white/10",
-                            ].join(" ")}
-                          >
-                            <div className="grid h-9 w-9 place-items-center rounded-full bg-white/10 ring-1 ring-white/10">
-                              <i className="fa-solid fa-user text-xs text-white/65" />
-                            </div>
+                          const alreadySelectedInAnotherTrack =
+                            selectedCollaboratorIds.has(artist.id) && !active;
 
-                            <div className="min-w-0 flex-1">
-                              <div className="truncate text-sm font-bold">
-                                {artist.name}
+                          return (
+                            <button
+                              key={artist.id || `${artist.name}-${index}`}
+                              type="button"
+                              onClick={() =>
+                                toggleCollaborator(track.id, artist)
+                              }
+                              className={[
+                                "flex cursor-pointer items-center gap-3 rounded-2xl p-3 text-left ring-1 transition",
+                                active
+                                  ? "bg-[#7a0f2b]/25 ring-[#7a0f2b]/50"
+                                  : "bg-white/5 ring-white/10 hover:bg-white/10",
+                              ].join(" ")}
+                            >
+                              <div className="grid h-9 w-9 place-items-center rounded-full bg-white/10 ring-1 ring-white/10">
+                                <i className="fa-solid fa-user text-xs text-white/65" />
                               </div>
-                              <div className="text-xs text-white/45">
-                                Artista
-                              </div>
-                            </div>
 
-                            {active && (
-                              <i className="fa-solid fa-check text-[#ff8aa8]" />
-                            )}
-                          </button>
-                        );
-                      })}
+                              <div className="min-w-0 flex-1">
+                                <div className="truncate text-sm font-bold">
+                                  {artist.name}
+                                </div>
+
+                                <div className="text-xs text-white/45">
+                                  {alreadySelectedInAnotherTrack
+                                    ? "Colaborador seleccionado"
+                                    : "Artista"}
+                                </div>
+                              </div>
+
+                              {active && (
+                                <i className="fa-solid fa-check text-[#ff8aa8]" />
+                              )}
+                            </button>
+                          );
+                        })}
                     </div>
                   </div>
                 </div>
@@ -549,7 +611,7 @@ export default function ArtistStudio({
               className={[
                 "rounded-full px-6 py-3 text-sm font-black transition",
                 canSubmit
-                  ? "bg-white text-black hover:bg-white/90 active:scale-95 cursor-pointer"
+                  ? "cursor-pointer bg-white text-black hover:bg-white/90 active:scale-95"
                   : "cursor-not-allowed bg-white/30 text-black/40",
               ].join(" ")}
             >
