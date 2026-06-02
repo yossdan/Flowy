@@ -52,6 +52,11 @@ public class ArtistQueryRepository {
         return repository.findAllById(artistIds);
     }
 
+    public ArtistEntity getArtistById(UUID artistId) {
+        return repository.findById(artistId).orElse(null);
+    }
+
+
     public boolean existsByUserId(UUID userId) {
         return repository.existsByUserId(userId);
     }

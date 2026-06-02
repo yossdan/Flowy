@@ -30,4 +30,10 @@ public class AlbumDetailQueryRepository {
         }
         throw new AlbumDetailException("Existe una error al intentar encontrar la canción");
     }
+    public List<AlbumDetailEntity> findTop2ByAlbum(AlbumEntity albumEntity){
+        return repository.findTop2ByAlbumId(albumEntity);
+    }
+    public List<AlbumDetailEntity> findAllSongsByAlbum(AlbumEntity albumEntity){
+        return repository.getAllByAlbumId(albumEntity);
+    }
 }
