@@ -12,7 +12,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Stream App",
+  title: "Flowy music",
   description: "Frontend only app",
 };
 
