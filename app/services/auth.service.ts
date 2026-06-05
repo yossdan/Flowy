@@ -56,7 +56,7 @@ export type UpdateProfilePayload = {
 };
 
 const MUSIC_API_URL =
-  process.env.NEXT_PUBLIC_MUSIC_API_URL || "http://localhost:8082";
+  process.env.NEXT_PUBLIC_MUSIC_API_URL || "http://flowymusic.tech:8082";
 
 const LOCAL_SESSION_TOKEN = "flowy-session";
 

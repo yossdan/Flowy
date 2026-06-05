@@ -1,6 +1,6 @@
 import type { PublishedAlbum, Song } from "@/app/types/dashboard";
 
-const ARTIST_API_URL = "http://localhost:8082";
+const ARTIST_API_URL = "http://flowymusic.tech:8082";
 
 export async function checkArtistStatusRequest(userId: string) {
   const response = await fetch(`${ARTIST_API_URL}/artists/exists/${userId}`, {
