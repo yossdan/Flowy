@@ -9,11 +9,13 @@ import AddToPlaylistModal from "@/app/components/player/AddToPlaylistModal";
 type RightPanelProps = {
   currentSong: Song | null;
   isPlaying: boolean;
+  duration: number;
 };
 
 export default function RightPanel({
   currentSong,
   isPlaying,
+  duration,
 }: RightPanelProps) {
   const {
     songs,
@@ -140,8 +142,7 @@ export default function RightPanel({
     image.onerror = () => {
       setDominantColor("122 15 43");
     };
-  }, [currentSong?.cover]);
-
+  }, [currentSong?.id, currentSong?.cover]);
   function showMessage(message: string) {
     setToast(message);
 
@@ -308,7 +309,12 @@ export default function RightPanel({
         }}
       />
 
-      <aside className="relative hidden w-[380px] shrink-0 rounded-3xl bg-[#0b0b0c] p-4 ring-1 ring-white/10 lg:block">
+      <aside
+        className="relative hidden w-[380px] shrink-0 rounded-3xl p-4 ring-1 ring-white/10 lg:block transition-colors duration-700"
+        style={{
+          background: `linear-gradient(180deg, rgb(${dominantColor} / 0.22), #0b0b0c 42%, #0b0b0c 100%)`,
+        }}
+      >
         <PanelToast message={toast} />
 
         <div className="flex items-center justify-between">
@@ -414,7 +420,7 @@ export default function RightPanel({
             <InfoCard
               icon="fa-clock"
               label="Duración"
-              value={fmtTime(currentSong.duration)}
+              value={fmtTime(duration || currentSong.duration)}
             />
           </div>
         </div>

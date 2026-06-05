@@ -22,12 +22,13 @@ import java.util.UUID;
 @Component
 public class SearchArtistComponent {
     private final ArtistQueryRepository repository;
-    private final SearchAlbumComponent  searchAlbumComponent;
+    private final SearchAlbumComponent searchAlbumComponent;
     private final SearchAlbumDetailComponent searchAlbumDetailComponent;
     private final ArtistPhotoCloudService profilePhotoService;
 
     @Autowired
-    public SearchArtistComponent(ArtistQueryRepository repository, SearchAlbumComponent searchAlbumComponent, SearchAlbumDetailComponent searchAlbumDetailComponent, ArtistPhotoCloudService profilePhotoService) {
+    public SearchArtistComponent(ArtistQueryRepository repository, SearchAlbumComponent searchAlbumComponent,
+            SearchAlbumDetailComponent searchAlbumDetailComponent, ArtistPhotoCloudService profilePhotoService) {
         this.repository = repository;
         this.searchAlbumComponent = searchAlbumComponent;
         this.searchAlbumDetailComponent = searchAlbumDetailComponent;
@@ -73,19 +74,51 @@ public class SearchArtistComponent {
         return new ArrayList<>();
     }
 
-    public ArtistDetailResponseDto getArtistDetails(UUID artistId){
+    public ArtistDetailResponseDto getArtistDetails(UUID artistId) {
         ArtistEntity artistEntity = repository.getArtistById(artistId);
+
         List<AlbumEntity> albumsEntities = searchAlbumComponent.getAlbumsByArtistId(artistEntity);
+
+        Map<UUID, byte[]> profilePhotos = profilePhotoService.getProfilePhotos(List.of(artistEntity));
+
+        byte[] profilePhoto = profilePhotos.get(artistEntity.getId());
+
+        if (profilePhoto == null) {
+            profilePhoto = profilePhotos.get(artistEntity.getUserId());
+        }
+
         Map<String, byte[]> albumPhotos = searchAlbumComponent.fetchAlbumCoversFromCloud(albumsEntities);
+
         List<AlbumResponseDto> albumsResponse = albumsEntities.stream()
-            .map(albumEntity -> {
-                UUID id = albumEntity.getId();
-                String title = albumEntity.getTitle();
-                byte[] coverPhoto = albumPhotos.get(title);
-                List<SongsResponseDto> bestSongsByAlbum = searchAlbumDetailComponent.findBestSongsByAlbum(albumEntity);
-                return new AlbumResponseDto(id, title, coverPhoto, bestSongsByAlbum);
-            }).toList();
-        return new ArtistDetailResponseDto(artistEntity.getName(), albumsResponse);
+                .map(albumEntity -> {
+                    UUID id = albumEntity.getId();
+                    String title = albumEntity.getTitle();
+
+                    byte[] coverPhoto = albumPhotos.get(albumEntity.getCoverImageObjectKey());
+
+                    if (coverPhoto == null) {
+                        coverPhoto = albumPhotos.get(title);
+                    }
+
+                    List<SongsResponseDto> bestSongsByAlbum = searchAlbumDetailComponent
+                            .findBestSongsByAlbum(albumEntity);
+
+                    return new AlbumResponseDto(
+                            id,
+                            title,
+                            coverPhoto,
+                            bestSongsByAlbum);
+                })
+                .toList();
+
+        return new ArtistDetailResponseDto(
+                artistEntity.getName(),
+                profilePhoto,
+                albumsResponse);
+    }
+
+    public void updateArtistNameByUserId(UUID userId, String artistName) {
+        repository.updateArtistNameByUserId(userId, artistName);
     }
 
 }

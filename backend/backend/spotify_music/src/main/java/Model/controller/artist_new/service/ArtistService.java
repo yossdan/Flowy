@@ -34,6 +34,10 @@ public class ArtistService {
         searchArtistComponent.deleteArtistByUserId(userId);
     }
 
+    public void updateArtistNameByUserId(UUID userId, String artistName) {
+        searchArtistComponent.updateArtistNameByUserId(userId, artistName);
+    }
+
     public List<ArtistResponseDto> findAllArtists() {
         return searchArtistComponent.findAllArtists();
     }
@@ -41,8 +45,8 @@ public class ArtistService {
     public List<ArtistResponseDto> findAllArtistsByName(String keyword) {
         return searchArtistComponent.searchAllArtistsByName(keyword);
     }
-    public ArtistDetailResponseDto getArtistDetails(UUID artistId){
+
+    public ArtistDetailResponseDto getArtistDetails(UUID artistId) {
         return searchArtistComponent.getArtistDetails(artistId);
     }
-
 }

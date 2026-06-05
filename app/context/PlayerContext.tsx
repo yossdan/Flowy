@@ -5,6 +5,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -61,6 +62,9 @@ type PlayerContextValue = {
   isPlaying: boolean;
   currentTime: number;
   duration: number;
+  bufferedTime: number;
+  isBuffering: boolean;
+  playbackError: string | null;
   volume: number;
 
   shuffle: boolean;
@@ -85,6 +89,7 @@ type PlayerContextValue = {
   togglePlayer: () => void;
   playNextSong: () => void;
   playPrevSong: () => void;
+  retryCurrentSong: () => void;
 
   toggleShuffle: () => void;
   toggleRepeat: () => void;
@@ -161,7 +166,13 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
   const [currentSong, setCurrentSong] = useState<Song | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [currentTime, setCurrentTime] = useState(0);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  const [currentTime, setCurrentTimeState] = useState(0);
+  const [audioDuration, setAudioDuration] = useState(0);
+  const [bufferedTime, setBufferedTime] = useState(0);
+  const [isBuffering, setIsBuffering] = useState(false);
+  const [playbackError, setPlaybackError] = useState<string | null>(null);
   const [volume, setVolume] = useState(0.72);
 
   const [shuffle, setShuffle] = useState(false);
@@ -177,8 +188,12 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const [playCounts, setPlayCounts] = useState<Record<string, number>>({});
   const [artistCounts, setArtistCounts] = useState<Record<string, number>>({});
   const [albumCounts, setAlbumCounts] = useState<Record<string, number>>({});
-
-  const duration = currentSong?.duration ?? 0;
+  const duration =
+    audioDuration && audioDuration > 0
+      ? audioDuration
+      : currentSong?.duration && currentSong.duration > 0
+        ? currentSong.duration
+        : 0;
 
   const likedSongs = useMemo(() => {
     return songs.filter((song) => likedIds.includes(song.id));
@@ -396,7 +411,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     });
 
     setCurrentSong(song);
-    setCurrentTime(0);
+    setCurrentTimeState(0);
     setIsPlaying(true);
   };
 
@@ -471,7 +486,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     }
 
     if (currentTime > 3) {
-      setCurrentTime(0);
+      setCurrentTimeState(0);
       return;
     }
 
@@ -757,33 +772,287 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
+    const audio = audioRef.current;
+
+    if (!audio) return;
+
+    audio.volume = volume;
+  }, [volume]);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+
+    if (!audio) return;
+
+    setAudioDuration(0);
+    setBufferedTime(0);
+    setCurrentTimeState(0);
+    setPlaybackError(null);
+    setIsBuffering(Boolean(currentSong?.audioUrl));
+
+    if (!currentSong?.audioUrl) {
+      audio.pause();
+      audio.removeAttribute("src");
+      audio.load();
+      setIsPlaying(false);
+      setIsBuffering(false);
+      return;
+    }
+
+    audio.src = currentSong.audioUrl;
+    audio.currentTime = 0;
+    audio.load();
+
+    if (isPlaying) {
+      audio.play().catch((error) => {
+        console.warn("No se pudo reproducir la canción:", error);
+        setPlaybackError("No se pudo reproducir esta canción.");
+        setIsBuffering(false);
+        setIsPlaying(false);
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentSong?.id, currentSong?.audioUrl]);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+
+    if (!audio) return;
+
+    if (!currentSong?.audioUrl) {
+      if (isPlaying) {
+        setCurrentTimeState((time) => {
+          const fallbackDuration = currentSong?.duration ?? 0;
+
+          if (fallbackDuration > 0 && time >= fallbackDuration) {
+            return fallbackDuration;
+          }
+
+          return time + 1;
+        });
+      }
+
+      return;
+    }
+
+    if (isPlaying) {
+      setPlaybackError(null);
+
+      audio.play().catch((error) => {
+        console.warn("No se pudo reproducir la canción:", error);
+        setPlaybackError("No se pudo reproducir esta canción.");
+        setIsBuffering(false);
+        setIsPlaying(false);
+      });
+
+      return;
+    }
+
+    audio.pause();
+  }, [isPlaying, currentSong?.audioUrl, currentSong?.duration]);
+
+  useEffect(() => {
     if (!isPlaying) return;
     if (!currentSong) return;
+    if (currentSong.audioUrl) return;
 
     const timer = window.setInterval(() => {
-      setCurrentTime((time) => {
-        if (time >= duration) return duration;
+      setCurrentTimeState((time) => {
+        const fallbackDuration = currentSong.duration ?? 0;
+
+        if (fallbackDuration > 0 && time >= fallbackDuration) {
+          return fallbackDuration;
+        }
+
         return time + 1;
       });
     }, 1000);
 
     return () => window.clearInterval(timer);
-  }, [isPlaying, currentSong, duration]);
+  }, [isPlaying, currentSong]);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+
+    if (!audio) return;
+
+    const updateTime = () => {
+      setCurrentTimeState(audio.currentTime || 0);
+    };
+
+    const updateMetadata = () => {
+      if (Number.isFinite(audio.duration) && audio.duration > 0) {
+        setAudioDuration(audio.duration);
+      }
+    };
+
+    const updateBuffered = () => {
+      try {
+        if (!audio.buffered || audio.buffered.length === 0) {
+          setBufferedTime(0);
+          return;
+        }
+
+        let bufferedEnd = 0;
+
+        for (let index = 0; index < audio.buffered.length; index += 1) {
+          const start = audio.buffered.start(index);
+          const end = audio.buffered.end(index);
+
+          if (audio.currentTime >= start && audio.currentTime <= end) {
+            bufferedEnd = end;
+            break;
+          }
+
+          bufferedEnd = Math.max(bufferedEnd, end);
+        }
+
+        setBufferedTime(Number.isFinite(bufferedEnd) ? bufferedEnd : 0);
+      } catch {
+        setBufferedTime(0);
+      }
+    };
+
+    const handleLoadStart = () => {
+      if (currentSong?.audioUrl) {
+        setIsBuffering(true);
+      }
+    };
+
+    const handleWaiting = () => {
+      if (currentSong?.audioUrl) {
+        setIsBuffering(true);
+      }
+    };
+
+    const handleCanPlay = () => {
+      setIsBuffering(false);
+      setPlaybackError(null);
+      updateMetadata();
+      updateBuffered();
+    };
+
+    const handlePlaying = () => {
+      setIsBuffering(false);
+      setPlaybackError(null);
+      updateMetadata();
+      updateBuffered();
+    };
+
+    const handleError = () => {
+      setIsBuffering(false);
+      setPlaybackError("No se pudo cargar o reproducir esta canción.");
+      setIsPlaying(false);
+    };
+
+    const handleEnded = () => {
+      setIsBuffering(false);
+      setCurrentTimeState(0);
+
+      if (repeat) {
+        audio.currentTime = 0;
+
+        audio.play().catch((error) => {
+          console.warn("No se pudo repetir la canción:", error);
+          setPlaybackError("No se pudo repetir esta canción.");
+          setIsPlaying(false);
+        });
+
+        return;
+      }
+
+      playNextSong();
+    };
+
+    audio.addEventListener("timeupdate", updateTime);
+    audio.addEventListener("loadedmetadata", updateMetadata);
+    audio.addEventListener("durationchange", updateMetadata);
+    audio.addEventListener("progress", updateBuffered);
+    audio.addEventListener("loadstart", handleLoadStart);
+    audio.addEventListener("waiting", handleWaiting);
+    audio.addEventListener("stalled", handleWaiting);
+    audio.addEventListener("seeking", handleWaiting);
+    audio.addEventListener("canplay", handleCanPlay);
+    audio.addEventListener("canplaythrough", handleCanPlay);
+    audio.addEventListener("seeked", handleCanPlay);
+    audio.addEventListener("playing", handlePlaying);
+    audio.addEventListener("error", handleError);
+    audio.addEventListener("ended", handleEnded);
+
+    return () => {
+      audio.removeEventListener("timeupdate", updateTime);
+      audio.removeEventListener("loadedmetadata", updateMetadata);
+      audio.removeEventListener("durationchange", updateMetadata);
+      audio.removeEventListener("progress", updateBuffered);
+      audio.removeEventListener("loadstart", handleLoadStart);
+      audio.removeEventListener("waiting", handleWaiting);
+      audio.removeEventListener("stalled", handleWaiting);
+      audio.removeEventListener("seeking", handleWaiting);
+      audio.removeEventListener("canplay", handleCanPlay);
+      audio.removeEventListener("canplaythrough", handleCanPlay);
+      audio.removeEventListener("seeked", handleCanPlay);
+      audio.removeEventListener("playing", handlePlaying);
+      audio.removeEventListener("error", handleError);
+      audio.removeEventListener("ended", handleEnded);
+    };
+  }, [repeat, currentSong, queue, songs, shuffle]);
 
   useEffect(() => {
     if (!currentSong) return;
     if (!isPlaying) return;
+    if (currentSong.audioUrl) return;
     if (duration <= 0) return;
     if (currentTime < duration) return;
 
     if (repeat) {
-      setCurrentTime(0);
+      setCurrentTimeState(0);
       return;
     }
 
     playNextSong();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentTime, duration, currentSong, isPlaying, repeat]);
+
+  const seekTo: React.Dispatch<React.SetStateAction<number>> = (value) => {
+    const nextValue =
+      typeof value === "function"
+        ? value(audioRef.current?.currentTime ?? currentTime)
+        : value;
+
+    if (audioRef.current && currentSong?.audioUrl) {
+      audioRef.current.currentTime = nextValue;
+    }
+
+    setCurrentTimeState(nextValue);
+  };
+
+  const retryCurrentSong = () => {
+    const audio = audioRef.current;
+
+    if (!audio || !currentSong?.audioUrl) return;
+
+    setPlaybackError(null);
+    setIsBuffering(true);
+    setCurrentTimeState(0);
+    setBufferedTime(0);
+
+    audio.pause();
+    audio.currentTime = 0;
+    audio.load();
+
+    audio
+      .play()
+      .then(() => {
+        setIsPlaying(true);
+        setIsBuffering(false);
+      })
+      .catch((error) => {
+        console.warn("No se pudo reintentar la canción:", error);
+        setPlaybackError("No se pudo reproducir esta canción.");
+        setIsBuffering(false);
+        setIsPlaying(false);
+      });
+  };
 
   const value = useMemo<PlayerContextValue>(
     () => ({
@@ -794,6 +1063,9 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       isPlaying,
       currentTime,
       duration,
+      bufferedTime,
+      isBuffering,
+      playbackError,
       volume,
 
       shuffle,
@@ -805,13 +1077,14 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       savedSongs,
       playlists,
 
-      setCurrentTime,
+      setCurrentTime: seekTo,
       setVolume,
 
       playSong,
       togglePlayer,
       playNextSong,
       playPrevSong,
+      retryCurrentSong,
 
       toggleShuffle,
       toggleRepeat,
@@ -842,6 +1115,9 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       isPlaying,
       currentTime,
       duration,
+      bufferedTime,
+      isBuffering,
+      playbackError,
       volume,
       shuffle,
       repeat,
@@ -854,7 +1130,10 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   );
 
   return (
-    <PlayerContext.Provider value={value}>{children}</PlayerContext.Provider>
+    <PlayerContext.Provider value={value}>
+      {children}
+      <audio ref={audioRef} preload="auto" />
+    </PlayerContext.Provider>
   );
 }
 

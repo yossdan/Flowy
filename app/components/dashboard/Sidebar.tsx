@@ -1,6 +1,13 @@
 "use client";
 
-type SidebarView = "home" | "liked" | "library" | "playlist" | "artist";
+type SidebarView =
+  | "home"
+  | "liked"
+  | "library"
+  | "playlist"
+  | "album"
+  | "artist"
+  | "artistProfile";
 
 type SidebarProps = {
   view?: SidebarView;
@@ -50,7 +57,9 @@ export default function Sidebar({
           <RailButton
             icon="fa-house"
             label="Inicio"
-            active={view === "home"}
+            active={
+              view === "home" || view === "artistProfile" || view === "album"
+            }
             onClick={goHome}
           />
 
@@ -71,7 +80,9 @@ export default function Sidebar({
           <RailButton
             icon="fa-bookmark"
             label="Biblioteca"
-            active={view === "library" || view === "playlist"}
+            active={
+              view === "library" || view === "playlist" || view === "album"
+            }
             onClick={openLibrary}
           />
 

@@ -45,6 +45,10 @@ export default function PlayerBar({
     toggleSaveSong,
     addSongToPlaylist,
     createPlaylistAndAddSong,
+    bufferedTime,
+    isBuffering,
+    playbackError,
+    retryCurrentSong,
   } = usePlayer();
 
   const [showQueue, setShowQueue] = useState(false);
@@ -272,6 +276,28 @@ export default function PlayerBar({
         </FloatingPanel>
       )}
 
+      {playbackError && currentSong && (
+        <div className="fixed bottom-[106px] left-1/2 z-[95] flex w-[calc(100%-24px)] max-w-xl -translate-x-1/2 items-center gap-3 rounded-2xl border border-red-400/20 bg-red-500/95 px-4 py-3 text-sm font-bold text-white shadow-2xl shadow-black/50 backdrop-blur md:bottom-[104px]">
+          <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white/15">
+            <i className="fa-solid fa-triangle-exclamation" />
+          </div>
+
+          <div className="min-w-0 flex-1">
+            <div className="truncate">{playbackError}</div>
+            <div className="mt-0.5 text-xs font-semibold text-white/75">
+              Revisa tu conexión o intenta reproducirla otra vez.
+            </div>
+          </div>
+
+          <button
+            onClick={retryCurrentSong}
+            className="shrink-0 rounded-full bg-white px-3 py-2 text-xs font-black text-red-600 transition hover:bg-white/90 active:scale-95"
+          >
+            Reintentar
+          </button>
+        </div>
+      )}
+
       <footer className="fixed bottom-0 left-0 right-0 z-50 border-t border-white/10 bg-[#0b0b0c]/95 text-white backdrop-blur-xl pb-[env(safe-area-inset-bottom)]">
         <div className="md:hidden px-3 py-2">
           <div className="flex items-center gap-3">
@@ -291,7 +317,9 @@ export default function PlayerBar({
 
             <div className="min-w-0 flex-1">
               <div className="truncate text-sm font-bold">{songTitle}</div>
-              <div className="truncate text-xs text-white/60">{songArtist}</div>
+              <div className="truncate text-xs text-white/60">
+                {isBuffering ? "Cargando audio..." : songArtist}
+              </div>
             </div>
 
             <AnimatedIconButton
@@ -309,7 +337,11 @@ export default function PlayerBar({
               className="relative grid h-12 w-12 place-items-center rounded-full bg-white text-black hover:bg-white/90 cursor-pointer active:scale-95 transition"
               aria-label={isPlaying ? "Pausar" : "Reproducir"}
             >
-              <PlayPauseIcon isPlaying={isPlaying} />
+              {isBuffering ? (
+                <i className="fa-solid fa-spinner animate-spin" />
+              ) : (
+                <PlayPauseIcon isPlaying={isPlaying} />
+              )}
             </button>
           </div>
 
@@ -321,6 +353,7 @@ export default function PlayerBar({
             <ScrubBar
               value={currentTime}
               max={duration}
+              buffered={bufferedTime}
               onChange={onSeek}
               accent="bg-[#7a0f2b]"
             />
@@ -352,7 +385,9 @@ export default function PlayerBar({
 
             <div className="min-w-0">
               <div className="truncate text-sm font-bold">{songTitle}</div>
-              <div className="truncate text-xs text-white/60">{songArtist}</div>
+              <div className="truncate text-xs text-white/60">
+                {isBuffering ? "Cargando audio..." : songArtist}
+              </div>
             </div>
 
             <AnimatedIconButton
@@ -410,6 +445,7 @@ export default function PlayerBar({
               <ScrubBar
                 value={currentTime}
                 max={duration}
+                buffered={bufferedTime}
                 onChange={onSeek}
                 accent="bg-[#7a0f2b]"
               />
@@ -702,11 +738,13 @@ function AnimatedIconButton({
 function ScrubBar({
   value,
   max,
+  buffered = 0,
   onChange,
   accent,
 }: {
   value: number;
   max: number;
+  buffered?: number;
   onChange: (v: number) => void;
   accent: string;
 }) {
@@ -714,6 +752,7 @@ function ScrubBar({
   const [dragging, setDragging] = useState(false);
 
   const pct = max === 0 ? 0 : clamp(value / max, 0, 1);
+  const bufferedPct = max === 0 ? 0 : clamp(buffered / max, 0, 1);
 
   const setFromClientX = (clientX: number) => {
     const el = ref.current;
@@ -778,15 +817,20 @@ function ScrubBar({
         setFromClientX(t.clientX);
       }}
       className={[
-        "group relative h-1 flex-1 overflow-hidden rounded-full bg-white/15",
-        "cursor-pointer select-none",
-        dragging ? "ring-2 ring-white/20" : "",
+        "group relative h-1.5 flex-1 overflow-hidden rounded-full bg-white/15",
+        "cursor-pointer select-none transition-all duration-200",
+        dragging ? "h-2 ring-2 ring-white/20" : "hover:h-2",
       ].join(" ")}
       title="Arrastra para cambiar"
     >
       <div
+        className="absolute inset-y-0 left-0 rounded-full bg-white/25 transition-[width] duration-300"
+        style={{ width: `${bufferedPct * 100}%` }}
+      />
+
+      <div
         className={[
-          "h-full rounded-full transition-[width] duration-150",
+          "relative h-full rounded-full transition-[width] duration-150",
           accent,
         ].join(" ")}
         style={{ width: `${pct * 100}%` }}
@@ -794,11 +838,11 @@ function ScrubBar({
 
       <div
         className={[
-          "absolute top-1/2 -translate-y-1/2 h-3 w-3 rounded-full bg-white shadow",
+          "absolute top-1/2 -translate-y-1/2 h-3.5 w-3.5 rounded-full bg-white shadow shadow-black/40",
           "opacity-0 transition",
           dragging ? "opacity-100" : "group-hover:opacity-100",
         ].join(" ")}
-        style={{ left: `calc(${pct * 100}% - 6px)` }}
+        style={{ left: `calc(${pct * 100}% - 7px)` }}
       />
     </div>
   );

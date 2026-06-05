@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import type { PlayerPlaylist } from "@/app/context/PlayerContext";
-import { stripColor } from "@/app/lib/helpers";
+import { fmtTime, stripColor } from "@/app/lib/helpers";
 import Sidebar from "@/app/components/dashboard/Sidebar";
 import RightPanel from "@/app/components/dashboard/RightPanel";
 import LikedHeader from "@/app/components/dashboard/LikedHeader";
@@ -18,7 +18,13 @@ import AuthGuard from "@/app/components/auth/AuthGuard";
 import { useAuth } from "@/app/context/AuthContext";
 import WelcomeIntro from "@/app/components/dashboard/WelcomeIntro";
 import { getStoredAuthUser } from "@/app/services/auth.service";
+import ArtistProfile from "@/app/components/artist/ArtistProfile";
+import type {
+  AlbumSearchItem,
+  ArtistSearchItem,
+} from "@/app/services/search.service";
 import {
+  getAlbumSongsRequest,
   searchRequest,
   type FrontSearchResponse,
 } from "@/app/services/search.service";
@@ -72,6 +78,12 @@ export default function DashboardScreen({
 
   const [selectedPlaylist, setSelectedPlaylist] =
     useState<PlayerPlaylist | null>(null);
+  const [selectedArtist, setSelectedArtist] = useState<ArtistSearchItem | null>(
+    null,
+  );
+  const [selectedAlbum, setSelectedAlbum] = useState<AlbumSearchItem | null>(
+    null,
+  );
   const [search, setSearch] = useState("");
   const [backendSearch, setBackendSearch] = useState<FrontSearchResponse>({
     artists: [],
@@ -299,11 +311,13 @@ export default function DashboardScreen({
   );
 
   const searchArtists = backendSearch.artists.filter(
-    (artist, index, array) => array.indexOf(artist) === index,
+    (artist, index, array) =>
+      array.findIndex((item) => item.id === artist.id) === index,
   );
 
   const searchAlbums = backendSearch.albums.filter(
-    (album, index, array) => array.indexOf(album) === index,
+    (album, index, array) =>
+      array.findIndex((item) => item.id === album.id) === index,
   );
 
   const hasSearchResults =
@@ -393,6 +407,18 @@ export default function DashboardScreen({
     setSearch("");
   };
 
+  const openArtistProfile = (artist: ArtistSearchItem) => {
+    setSelectedArtist(artist);
+    setView("artistProfile");
+    setSearch("");
+  };
+
+  const openAlbumDetail = (album: AlbumSearchItem) => {
+    setSelectedAlbum(album);
+    setView("album");
+    setSearch("");
+  };
+
   return (
     <>
       {showWelcomeIntro && (
@@ -418,6 +444,11 @@ export default function DashboardScreen({
                 goBack={() => {
                   if (view === "playlist") {
                     openLibrary();
+                    return;
+                  }
+
+                  if (view === "album") {
+                    goHome();
                     return;
                   }
 
@@ -622,6 +653,8 @@ export default function DashboardScreen({
                           openLiked={openLiked}
                           openLibrary={openLibrary}
                           openPlaylist={openPlaylist}
+                          openArtistProfile={openArtistProfile}
+                          openAlbumDetail={openAlbumDetail}
                         />
                       )}
 
@@ -668,12 +701,33 @@ export default function DashboardScreen({
                           }}
                         />
                       )}
+
+                      {view === "album" && selectedAlbum && (
+                        <AlbumPage
+                          album={selectedAlbum}
+                          onBack={goHome}
+                          playSong={playSong}
+                        />
+                      )}
+
+                      {view === "artistProfile" && selectedArtist && (
+                        <ArtistProfile
+                          artistId={selectedArtist.id}
+                          artistName={selectedArtist.name}
+                          onBack={goHome}
+                          playSong={playSong}
+                        />
+                      )}
                     </div>
                   </div>
                 </section>
               </main>
 
-              <RightPanel currentSong={currentSong} isPlaying={isPlaying} />
+              <RightPanel
+                currentSong={currentSong}
+                isPlaying={isPlaying}
+                duration={duration}
+              />
             </div>
           </div>
           <CreatePlaylistModal
@@ -733,8 +787,6 @@ export default function DashboardScreen({
         </div>
       </div>
     </>
-
-    // aqui termina la proteccion de rutas, si no esta logueado no puede acceder al dashboard
   );
 }
 
@@ -939,6 +991,8 @@ function HomeContent({
   openLiked,
   openLibrary,
   openPlaylist,
+  openArtistProfile,
+  openAlbumDetail,
 }: {
   userName: string;
   showSearchResults: boolean;
@@ -946,8 +1000,8 @@ function HomeContent({
   hasSearchResults: boolean;
   searchSongs: Song[];
   searchPlaylists: PlayerPlaylist[];
-  searchArtists: string[];
-  searchAlbums: string[];
+  searchArtists: ArtistSearchItem[];
+  searchAlbums: AlbumSearchItem[];
   likedSongs: Song[];
   playlists: PlayerPlaylist[];
   recentlyPlayed: Song[];
@@ -966,6 +1020,8 @@ function HomeContent({
   openLiked: () => void;
   openLibrary: () => void;
   openPlaylist: (playlist: PlayerPlaylist) => void;
+  openArtistProfile: (artist: ArtistSearchItem) => void;
+  openAlbumDetail: (album: AlbumSearchItem) => void;
 }) {
   if (showSearchResults) {
     return (
@@ -1030,10 +1086,12 @@ function HomeContent({
                 <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-6">
                   {searchArtists.map((artist) => (
                     <SearchCircleCard
-                      key={artist}
+                      key={artist.id}
                       icon="fa-microphone-lines"
-                      title={artist}
+                      title={artist.name}
                       subtitle="Artista"
+                      image={artist.photo}
+                      onClick={() => openArtistProfile(artist)}
                     />
                   ))}
                 </div>
@@ -1047,7 +1105,13 @@ function HomeContent({
               >
                 <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-6">
                   {searchAlbums.map((album) => (
-                    <SearchAlbumCard key={album} title={album} />
+                    <SearchAlbumCard
+                      key={album.id}
+                      title={album.title}
+                      artist={album.artist}
+                      cover={album.cover}
+                      onClick={() => openAlbumDetail(album)}
+                    />
                   ))}
                 </div>
               </SearchSection>
@@ -1298,6 +1362,235 @@ function HomeContent({
           text="Reproduce canciones, marca favoritos o crea playlists para que Flowy ordene tu inicio según tus gustos."
         />
       )}
+    </div>
+  );
+}
+
+function AlbumPage({
+  album,
+  onBack,
+  playSong,
+}: {
+  album: AlbumSearchItem;
+  onBack: () => void;
+  playSong: (song: Song, queue?: Song[]) => void;
+}) {
+  const [songs, setSongs] = useState<Song[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadAlbumSongs() {
+      try {
+        setLoading(true);
+        setError("");
+
+        const albumSongs = await getAlbumSongsRequest(album);
+
+        if (cancelled) return;
+
+        setSongs(albumSongs);
+      } catch (loadError) {
+        if (cancelled) return;
+
+        console.warn(
+          "No se pudieron cargar las canciones del álbum:",
+          loadError,
+        );
+        setError("No se pudieron cargar las canciones de este álbum.");
+        setSongs([]);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    loadAlbumSongs();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [album]);
+
+  const totalDuration = songs.reduce(
+    (total, song) => total + (song.duration || 0),
+    0,
+  );
+  const songsText = `${songs.length} ${songs.length === 1 ? "canción" : "canciones"}`;
+
+  const playAlbum = () => {
+    const firstSong = songs[0];
+    if (!firstSong) return;
+
+    playSong(firstSong, songs);
+  };
+
+  return (
+    <div className="animate-fadeUp">
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#7a0f2b]/55 via-white/8 to-black p-5 ring-1 ring-white/10 sm:p-7">
+        <div className="absolute -right-24 -top-24 h-72 w-72 rounded-full bg-[#7a0f2b]/30 blur-3xl" />
+        <div className="absolute -bottom-32 left-10 h-72 w-72 rounded-full bg-white/10 blur-3xl" />
+
+        <button
+          onClick={onBack}
+          className="relative z-10 grid h-10 w-10 place-items-center rounded-full bg-black/30 text-white ring-1 ring-white/10 transition hover:bg-white/10 cursor-pointer"
+          aria-label="Volver"
+        >
+          <i className="fa-solid fa-chevron-left" />
+        </button>
+
+        <div className="relative z-10 mt-6 grid gap-6 lg:grid-cols-[240px_1fr] lg:items-end">
+          <div className="relative aspect-square overflow-hidden rounded-3xl bg-gradient-to-br from-[#7a0f2b]/45 via-white/10 to-black shadow-2xl shadow-black/50 ring-1 ring-white/10">
+            {album.cover ? (
+              <img
+                src={album.cover}
+                alt={album.title}
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <div className="grid h-full w-full place-items-center">
+                <div className="text-center">
+                  <i className="fa-solid fa-compact-disc text-7xl text-white/70" />
+                  <p className="mt-4 text-xs font-black uppercase tracking-[0.24em] text-white/40">
+                    Flowy Album
+                  </p>
+                </div>
+              </div>
+            )}
+
+            <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-white/5" />
+          </div>
+
+          <div className="min-w-0 pb-2">
+            <p className="text-xs font-black uppercase tracking-[0.28em] text-white/55">
+              Álbum
+            </p>
+
+            <h1 className="mt-3 break-words text-4xl font-black tracking-tight sm:text-6xl lg:text-7xl">
+              {album.title}
+            </h1>
+
+            <div className="mt-4 flex flex-wrap items-center gap-2 text-sm text-white/70">
+              <span className="font-bold text-white">{album.artist}</span>
+              <span>•</span>
+              <span>{songsText}</span>
+              {totalDuration > 0 && (
+                <>
+                  <span>•</span>
+                  <span>{fmtTime(totalDuration)}</span>
+                </>
+              )}
+            </div>
+
+            <div className="mt-6 flex flex-wrap items-center gap-3">
+              <button
+                onClick={playAlbum}
+                disabled={songs.length === 0}
+                className={[
+                  "inline-flex h-14 items-center gap-3 rounded-full px-6 text-sm font-black transition active:scale-95",
+                  songs.length > 0
+                    ? "bg-[#7a0f2b] text-white shadow-lg shadow-black/30 hover:brightness-110 cursor-pointer"
+                    : "bg-white/10 text-white/35 cursor-not-allowed",
+                ].join(" ")}
+              >
+                <i className="fa-solid fa-play text-xs" />
+                Reproducir álbum
+              </button>
+
+              <button className="grid h-12 w-12 place-items-center rounded-full bg-white/10 text-white ring-1 ring-white/10 transition hover:bg-white/15 cursor-pointer">
+                <i className="fa-solid fa-heart" />
+              </button>
+
+              <button className="grid h-12 w-12 place-items-center rounded-full bg-white/10 text-white ring-1 ring-white/10 transition hover:bg-white/15 cursor-pointer">
+                <i className="fa-solid fa-ellipsis" />
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-6 rounded-3xl bg-white/5 p-3 ring-1 ring-white/10 sm:p-4">
+        <div className="hidden grid-cols-[48px_1fr_160px_90px] gap-3 border-b border-white/10 px-4 pb-3 text-xs font-black uppercase tracking-[0.18em] text-white/35 md:grid">
+          <span>#</span>
+          <span>Título</span>
+          <span>Álbum</span>
+          <span className="text-right">Duración</span>
+        </div>
+
+        {loading ? (
+          <div className="space-y-3 p-2 sm:p-4">
+            {Array.from({ length: 5 }).map((_, index) => (
+              <div
+                key={index}
+                className="flex animate-pulse items-center gap-3 rounded-2xl bg-white/5 p-3"
+              >
+                <div className="h-11 w-11 rounded-xl bg-white/10" />
+                <div className="flex-1 space-y-2">
+                  <div className="h-3 w-2/5 rounded bg-white/10" />
+                  <div className="h-3 w-1/4 rounded bg-white/5" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : error ? (
+          <div className="rounded-2xl bg-red-500/10 p-5 text-center text-sm font-semibold text-red-100 ring-1 ring-red-500/20">
+            {error}
+          </div>
+        ) : songs.length === 0 ? (
+          <EmptyLibraryState
+            title="Este álbum aún no tiene canciones"
+            text="Cuando el artista publique canciones, aparecerán en esta sección."
+          />
+        ) : (
+          <div className="space-y-1 pt-2">
+            {songs.map((song, index) => (
+              <button
+                key={song.id}
+                onClick={() => playSong(song, songs)}
+                className="group grid w-full grid-cols-[42px_1fr_auto] items-center gap-3 rounded-2xl px-3 py-3 text-left transition hover:bg-white/10 md:grid-cols-[48px_1fr_160px_90px] cursor-pointer"
+              >
+                <div className="text-sm font-bold text-white/45 group-hover:text-white">
+                  {index + 1}
+                </div>
+
+                <div className="flex min-w-0 items-center gap-3">
+                  <div className="h-11 w-11 shrink-0 overflow-hidden rounded-xl bg-gradient-to-br from-[#7a0f2b]/45 to-black ring-1 ring-white/10">
+                    {song.cover ? (
+                      <img
+                        src={song.cover}
+                        alt={song.title}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <div className="grid h-full w-full place-items-center">
+                        <i className="fa-solid fa-music text-xs text-white/70" />
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="min-w-0">
+                    <div className="truncate text-sm font-extrabold text-white">
+                      {song.title}
+                    </div>
+                    <div className="truncate text-xs text-white/45">
+                      {song.artist}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="hidden truncate text-sm text-white/45 md:block">
+                  {song.album}
+                </div>
+
+                <div className="text-right text-xs font-semibold text-white/45">
+                  {song.duration > 0 ? fmtTime(song.duration) : "--:--"}
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -1765,15 +2058,28 @@ function SearchCircleCard({
   icon,
   title,
   subtitle,
+  image,
+  onClick,
 }: {
   icon: string;
   title: string;
   subtitle: string;
+  image?: string | null;
+  onClick?: () => void;
 }) {
   return (
-    <button className="group rounded-2xl bg-white/6 p-4 text-center ring-1 ring-white/10 transition hover:bg-white/10 cursor-pointer">
-      <div className="mx-auto grid h-20 w-20 place-items-center rounded-full bg-gradient-to-br from-[#7a0f2b]/40 to-white/5 ring-1 ring-white/10">
-        <i className={`fa-solid ${icon} text-2xl text-white/75`} />
+    <button
+      onClick={onClick}
+      className="group rounded-2xl bg-white/6 p-4 text-center ring-1 ring-white/10 transition hover:bg-white/10 cursor-pointer"
+    >
+      <div className="mx-auto h-20 w-20 overflow-hidden rounded-full bg-gradient-to-br from-[#7a0f2b]/40 to-white/5 ring-1 ring-white/10">
+        {image ? (
+          <img src={image} alt={title} className="h-full w-full object-cover" />
+        ) : (
+          <div className="grid h-full w-full place-items-center">
+            <i className={`fa-solid ${icon} text-2xl text-white/75`} />
+          </div>
+        )}
       </div>
 
       <div className="mt-3 truncate text-sm font-bold">{title}</div>
@@ -1782,19 +2088,46 @@ function SearchCircleCard({
   );
 }
 
-function SearchAlbumCard({ title }: { title: string }) {
+function SearchAlbumCard({
+  title,
+  artist = "Álbum",
+  cover,
+  onClick,
+}: {
+  title: string;
+  artist?: string;
+  cover?: string | null;
+  onClick?: () => void;
+}) {
   return (
-    <button className="group rounded-2xl bg-white/6 p-3 text-left ring-1 ring-white/10 transition hover:bg-white/10 cursor-pointer">
+    <button
+      onClick={onClick}
+      className="group rounded-2xl bg-white/6 p-3 text-left ring-1 ring-white/10 transition hover:bg-white/10 cursor-pointer"
+    >
       <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-[#7a0f2b]/35 via-white/10 to-black ring-1 ring-white/10">
-        <div className="aspect-square w-full" />
+        <div className="aspect-square w-full">
+          {cover ? (
+            <img
+              src={cover}
+              alt={title}
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            <div className="grid h-full w-full place-items-center">
+              <i className="fa-solid fa-compact-disc text-4xl text-white/70" />
+            </div>
+          )}
+        </div>
+
+        <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-transparent opacity-70" />
 
         <div className="absolute bottom-3 right-3 grid h-10 w-10 place-items-center rounded-full bg-[#7a0f2b] text-white opacity-0 shadow-lg shadow-black/30 transition group-hover:opacity-100 group-active:scale-95">
-          <i className="fa-solid fa-play text-xs" />
+          <i className="fa-solid fa-arrow-right text-xs" />
         </div>
       </div>
 
       <div className="mt-3 truncate text-sm font-bold">{title}</div>
-      <div className="text-xs text-white/50">Álbum</div>
+      <div className="truncate text-xs text-white/50">{artist}</div>
     </button>
   );
 }

@@ -5,6 +5,7 @@ import Model.controller.user.dto.request.RegisterUserRequestDto;
 import Model.controller.user.dto.request.UpdateUserRequestDto;
 import Model.controller.user.dto.response.LoginUserResponseDto;
 import Model.controller.user.dto.response.RegisterUserResponseDto;
+import Model.controller.user.dto.response.UpdateUserResponseDto;
 import Model.controller.user.dto.response.UserProfilePhotoResponseDto;
 import Model.controller.user.service.UserService;
 import jakarta.validation.Valid;
@@ -12,6 +13,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+import Model.controller.user.dto.response.UpdateUserResponseDto;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -63,6 +67,15 @@ public class UserController {
         userService.updateUser(dto);
 
         return ResponseEntity.noContent().build();
+    }
+
+    @PutMapping(value = "/update-profile", consumes = "multipart/form-data")
+    public ResponseEntity<UpdateUserResponseDto> updateProfile(
+            @RequestParam UUID userId,
+            @RequestParam String userName,
+            @RequestParam(required = false) MultipartFile profilePhoto) {
+        UpdateUserResponseDto response = userService.updateProfile(userId, userName, profilePhoto);
+        return ResponseEntity.ok(response);
     }
 
 }

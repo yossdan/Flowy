@@ -10,13 +10,23 @@ import java.util.UUID;
 public interface ArtistRepository extends JpaRepository<ArtistEntity, UUID> {
     boolean existsByName(String name);
 
+    boolean existsByNameAndActiveTrue(String name);
+
     boolean existsByUserId(UUID userId);
+
+    boolean existsByUserIdAndActiveTrue(UUID userId);
 
     void deleteByUserId(UUID userId);
 
     List<ArtistEntity> findAllByNameContainingIgnoreCase(String name);
 
+    List<ArtistEntity> findAllByNameContainingIgnoreCaseAndActiveTrue(String name);
+
     Optional<ArtistEntity> findByUserId(UUID userId);
 
     List<ArtistEntity> findAllByNameStartingWithIgnoreCase(String keyword);
+
+    List<ArtistEntity> findAllByNameStartingWithIgnoreCaseAndActiveTrue(String keyword);
+
+    List<ArtistEntity> findAllByActiveTrue();
 }

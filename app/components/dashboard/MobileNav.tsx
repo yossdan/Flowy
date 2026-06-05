@@ -3,7 +3,14 @@
 import Link from "next/link";
 
 type MobileNavProps = {
-  view?: "home" | "liked" | "library" | "playlist" | "artist";
+  view?:
+    | "home"
+    | "liked"
+    | "library"
+    | "playlist"
+    | "album"
+    | "artist"
+    | "artistProfile";
   goHome?: () => void;
   openLibrary?: () => void;
   openArtistStudio?: () => void;
@@ -23,7 +30,7 @@ export default function MobileNav({
         <MobileNavButton
           icon="fa-house"
           label="Inicio"
-          active={view === "home"}
+          active={view === "home" || view === "album"}
           onClick={goHome}
         />
 
@@ -37,7 +44,7 @@ export default function MobileNav({
         <MobileNavButton
           icon="fa-bookmark"
           label="Biblioteca"
-          active={view === "library" || view === "playlist"}
+          active={view === "library" || view === "playlist" || view === "album"}
           onClick={openLibrary}
         />
 

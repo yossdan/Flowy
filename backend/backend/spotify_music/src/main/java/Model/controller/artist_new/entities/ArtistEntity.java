@@ -1,7 +1,5 @@
 package Model.controller.artist_new.entities;
 
-
-
 import Model.controller.album_new.entities.AlbumEntity;
 import Model.controller.song_artist_new.entities.SongArtistEntity;
 import jakarta.persistence.*;
@@ -17,18 +15,20 @@ public class ArtistEntity {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @Column(name = "name",  nullable = false, unique = true)
+    @Column(name = "name", nullable = false, unique = true)
     private String name;
 
-    @Column(name = "user_id",  nullable = false, unique = true)
+    @Column(name = "user_id", nullable = false, unique = true)
     private UUID userId;
+
+    @Column(name = "active", nullable = false)
+    private Boolean active = true;
 
     @Column(name = "created_at")
     private OffsetDateTime createdAt;
 
     @Column(name = "updated_at")
     private OffsetDateTime updatedAt;
-
 
     @OneToMany(fetch = FetchType.LAZY, mappedBy = "artistId")
     private List<SongArtistEntity> songArtistEntities;
@@ -39,15 +39,34 @@ public class ArtistEntity {
     public ArtistEntity() {
     }
 
-    public ArtistEntity( UUID userId, String name) {
+    public ArtistEntity(UUID userId, String name) {
         this.name = name;
         this.userId = userId;
+        this.active = true;
         this.createdAt = OffsetDateTime.now();
+        this.updatedAt = OffsetDateTime.now();
     }
-
 
     public ArtistEntity(UUID id) {
         this.id = id;
+    }
+
+    @PrePersist
+    public void prePersist() {
+        if (this.active == null) {
+            this.active = true;
+        }
+
+        if (this.createdAt == null) {
+            this.createdAt = OffsetDateTime.now();
+        }
+
+        this.updatedAt = OffsetDateTime.now();
+    }
+
+    @PreUpdate
+    public void preUpdate() {
+        this.updatedAt = OffsetDateTime.now();
     }
 
     public UUID getId() {
@@ -64,6 +83,7 @@ public class ArtistEntity {
 
     public void setName(String name) {
         this.name = name;
+        this.updatedAt = OffsetDateTime.now();
     }
 
     public UUID getUserId() {
@@ -72,6 +92,16 @@ public class ArtistEntity {
 
     public void setUserId(UUID userId) {
         this.userId = userId;
+        this.updatedAt = OffsetDateTime.now();
+    }
+
+    public Boolean getActive() {
+        return active;
+    }
+
+    public void setActive(Boolean active) {
+        this.active = active;
+        this.updatedAt = OffsetDateTime.now();
     }
 
     public OffsetDateTime getCreatedAt() {
@@ -96,6 +126,7 @@ public class ArtistEntity {
                 "id=" + id +
                 ", name='" + name + '\'' +
                 ", userId=" + userId +
+                ", active=" + active +
                 ", createdAt=" + createdAt +
                 ", updatedAt=" + updatedAt +
                 '}';

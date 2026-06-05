@@ -1,6 +1,7 @@
 package Model.controller.artist_new;
 
 import Model.controller.artist_new.dto.request.RegisterArtistRequestDto;
+import Model.controller.artist_new.dto.request.UpdateArtistNameRequestDto;
 import Model.controller.artist_new.dto.response.ArtistDetailResponseDto;
 import Model.controller.artist_new.dto.response.ArtistResponseDto;
 import Model.controller.artist_new.service.ArtistService;
@@ -67,10 +68,26 @@ public class ArtistController {
         return ResponseEntity.ok(artistDetails);
     }
 
+    @PutMapping("/update-name-by-user")
+    public ResponseEntity<Map<String, String>> updateArtistNameByUserId(
+            @RequestBody UpdateArtistNameRequestDto dto) {
+
+        service.updateArtistNameByUserId(dto.userId(), dto.artistName());
+
+        Map<String, String> response = new HashMap<>();
+        response.put("message", "Nombre del artista actualizado correctamente");
+
+        return ResponseEntity.ok(response);
+    }
 
     @DeleteMapping("/delete-by-user/{userId}")
-    public ResponseEntity<Void> deleteArtistByUserId(@PathVariable UUID userId) {
+    public ResponseEntity<Map<String, String>> deleteArtistByUserId(@PathVariable UUID userId) {
         service.deleteArtistByUserId(userId);
-        return ResponseEntity.noContent().build();
+
+        Map<String, String> response = new HashMap<>();
+        response.put("role", "listener");
+        response.put("message", "El usuario dejó de ser artista correctamente");
+
+        return ResponseEntity.ok(response);
     }
 }

@@ -1,4 +1,4 @@
-export type View = "home" | "liked" | "library" | "playlist" | "artist";
+export type View = "home" | "liked" | "library" | "playlist" | "album" | "artist" | "artistProfile";
 export type Tab = "todo" | "musica";
 export type UserRole = "listener" | "artist";
 
@@ -48,9 +48,10 @@ export type Song = {
   title: string;
   artist: string;
   album: string;
-  added: string;
   duration: number;
   cover?: string | null;
+  added: string;
+  audioUrl?: string | null;
 };
 
 export type Playlist = {
